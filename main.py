@@ -1,4 +1,5 @@
-# Obtained copyright license from Google LLC, Apache License. 
+# Note this a refactored version of a file Obtained copyright license from Google LLC, Apache License. 
+# It utilizes similar game style-play but implements a different network and data system via Lang-Chain to ease manual rooting. 
 # Copyright 2025 *tbd name*
 
 # Licensed under the Apache License, Version 2.0 (the "License");
