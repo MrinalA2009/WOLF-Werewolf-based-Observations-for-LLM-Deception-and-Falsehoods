@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, Literal
 from langchain_core.runnables import RunnableConfig
 import random
 import tqdm
+from langgraph.graph import StateGraph, END
 
 class GameState(BaseModel):
     round_num: int = 0
@@ -85,4 +86,118 @@ def eliminate_node(state: GameState, config: RunnableConfig) -> GameState:
         "eliminate_log": log,
         "phase": "protect"
     })
+def protect_node(state: GameState, config: RunnableConfig) -> GameState:
+    """Doctor chooses a player to save during the same night."""
+    player_objects = config["player_objects"]
+    doctor_name = state.doctor
+
+    # check if doctor was killed 
+    if doctor_name not in state.alive_players:
+        return state.model_copy(update={"phase": "unmask"})
+
+    protect_target, log = player_objects[doctor_name].save()
+
+    if not protect_target:
+        raise ValueError(f"{doctor_name} failed to specify a protection target.")
+
+    tqdm.tqdm.write(f"{doctor_name} protected {protect_target}")
+
+    return state.model_copy(update={
+        "protected": protect_target,
+        "protect_log": log,
+        "phase": "unmask"
+    })
+def unmask_node(state: GameState, config: RunnableConfig) -> GameState:
+    """Seer investigates one player each night."""
+    player_objects = config["player_objects"]
+    seer_name = state.seer
+
+    # check if seer is dead
+    if seer_name not in state.alive_players:
+        return state.model_copy(update={"phase": "resolve_night"})
+
+    target, log = player_objects[seer_name].unmask()
+    if not target:
+        raise ValueError(f"{seer_name} failed to return a target.")
+
+    # reveal to seer 
+    role_revealed = state.roles[target]
+    player_objects[seer_name].reveal_and_update(target, role_revealed)
+
+    return state.model_copy(update={
+        "unmasked": target,
+        "unmask_log": log,
+        "phase": "resolve_night"
+    })
+def night_node(state: GameState, _: RunnableConfig) -> GameState:
+    """Apply elimination/protection outcome and broadcast announcement."""
+    if state.eliminated and state.eliminated != state.protected:
+        # death of victim
+        new_alive = [p for p in state.alive_players if p != state.eliminated]
+        announcement = (
+            f"The Werewolves removed {state.eliminated} from the game during the night."
+        )
+    else:
+        new_alive = state.alive_players
+        announcement = "No one was removed from the game during the night."
+
+    tqdm.tqdm.write(announcement)
+
+    return state.model_copy(update={
+        "alive_players": new_alive,
+        "phase": "check_winner_night"
+    })
+def checkwinner_node(state: GameState, _: RunnableConfig) -> GameState:
+    """Return to day phase or finish game if a faction wins."""
+    wolves_alive = [p for p in state.werewolves if p in state.alive_players]
+    villagers_alive = [p for p in state.alive_players if p not in wolves_alive]
+
+    if not wolves_alive:
+        winner = "Villagers"
+    elif len(wolves_alive) >= len(villagers_alive):
+        winner = "Werewolves"
+    else:
+        winner = None
+
+    next_phase = "debate" if not winner else "summarize"  # ends/explains  if completed
+
+    return state.model_copy(update={
+        "winner": winner,
+        "phase": next_phase,
+        "step": 0        
+    })
+#game state LangChain graph
+
+graph = StateGraph(GameState)
+
+graph.add_node("eliminate", eliminate_node)
+graph.add_node("protect", protect_node)
+graph.add_node("unmask", unmask_node)
+graph.add_node("resolve_night", resolve_night_node)
+graph.add_node("check_winner_night", check_winner_node)
+graph.add_node("debate", debate_node)
+graph.add_node("vote", vote_node)
+graph.add_node("exile", exile_node)
+graph.add_node("check_winner_day", check_winner_node)
+graph.add_node("summarize", summarize_node)
+graph.add_node("end", end_node)
+
+# Entry point
+graph.set_entry_point("eliminate")
+
+# Routing 
+graph.add_conditional_edges("eliminate", lambda s: s.phase)
+graph.add_conditional_edges("protect", lambda s: s.phase)
+graph.add_conditional_edges("unmask", lambda s: s.phase)
+graph.add_conditional_edges("resolve_night", lambda s: s.phase)
+graph.add_conditional_edges("check_winner_night", lambda s: s.phase)
+graph.add_conditional_edges("debate", lambda s: "vote" if s.step >= MAX_DEBATE_TURNS else "debate")
+graph.add_conditional_edges("vote", lambda s: "exile")
+graph.add_conditional_edges("exile", lambda s: "check_winner_day")
+graph.add_conditional_edges("check_winner_day", lambda s: "summarize" if s.winner else "eliminate")
+graph.add_conditional_edges("summarize", lambda s: "end")
+graph.add_edge("end", END)
+
+
+
 
