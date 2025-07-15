@@ -16,6 +16,9 @@
 
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Literal
+from langchain_core.runnables import RunnableConfig
+import random
+import tqdm
 
 class GameState(BaseModel):
     round_num: int = 0
@@ -53,4 +56,33 @@ class GameState(BaseModel):
         "check_winner_day", "summarize"
     ] = "eliminate"
     step: int = 0 
+
+def eliminate_node(state: GameState, config: RunnableConfig) -> GameState:
+    player_objects = config["player_objects"]
+
+    alive_wolves = [
+        name for name in state.werewolves if name in state.alive_players
+    ]
+    if not alive_wolves:
+        raise ValueError("No werewolves left to eliminate.")
+
+    acting_wolf = random.choice(alive_wolves)
+    eliminated, log = player_objects[acting_wolf].eliminate()
+
+    if not eliminated:
+        raise ValueError(f"{acting_wolf} failed to return a target.")
+
+    tqdm.tqdm.write(f"{acting_wolf} eliminated {eliminated}")
+
+   # temp for sharing who was eliminated during the night
+    for wolf in alive_wolves:
+        player_objects[wolf]._add_observation(
+            f"During the night, we decided to eliminate {eliminated}."
+        )
+
+    return state.model_copy(update={
+        "eliminated": eliminated,
+        "eliminate_log": log,
+        "phase": "protect"
+    })
 
