@@ -21,6 +21,8 @@ import random
 import tqdm
 from langgraph.graph import StateGraph, END
 from collections import Counter
+from Bidding import get_bid, choose_next_speaker
+from concurrent.futures import ThreadPoolExecutor
 
 class GameState(BaseModel):
     round_num: int = 0
@@ -172,43 +174,31 @@ def debate_node(state: GameState, config: RunnableConfig) -> GameState:
     player_objects = config["player_objects"]
     MAX_DEBATE_TURNS = config.get("MAX_DEBATE_TURNS", 6)
 
-    # Get all players alive
-    alive = state.alive_players
+    dialogue_history = "\n".join([f"{s}: {t}" for s, t in state.debate_log])
     last_speaker = state.debate_log[-1][0] if state.debate_log else None
 
-    # Run bidding system (parallel)
-    from concurrent.futures import ThreadPoolExecutor
-    bids = {}
+    alive_players = [p for p in state.alive_players if p != last_speaker]
     bid_logs = []
-    with ThreadPoolExecutor(max_workers=len(alive)) as executor:
-        futures = {
-            name: executor.submit(player_objects[name].bid)
-            for name in alive if name != last_speaker
-        }
+    bid_dict = {}
+
+    # Run bids in parallel
+    with ThreadPoolExecutor(max_workers=len(alive_players)) as executor:
+        futures = {name: executor.submit(get_bid, name, dialogue_history) for name in alive_players}
         for name, future in futures.items():
-            bid, log = future.result()
-            bids[name] = bid
-            bid_logs.append(f"{name}: {log}")
+            bid, raw_output = future.result()
+            bid_dict[name] = bid
+            bid_logs.append(f"{name} bid {bid} – {raw_output}")
 
-    # next speaker
-    max_bid = max(bids.values())
-    candidates = [name for name, val in bids.items() if val == max_bid]
-    next_speaker = random.choice(candidates)
-
-    # Call debate
-    speaker = player_objects[next_speaker]
-    dialogue, log = speaker.debate()
+    next_speaker = choose_next_speaker(bid_dict, dialogue_history)
+    dialogue, log = player_objects[next_speaker].debate()
     if not dialogue:
-        raise ValueError(f"{next_speaker} failed to provide a debate line.")
+        raise ValueError(f"{next_speaker} failed to produce a debate line.")
 
-    tqdm.tqdm.write(f"{next_speaker} ({state.roles[next_speaker]}): {dialogue}")
-
-    updated_log = state.debate_log + [[next_speaker, dialogue]]
-    updated_bid_logs = state.bid_logs + bid_logs
+    tqdm.tqdm.write(f"{next_speaker}: {dialogue}")
 
     return state.model_copy(update={
-        "debate_log": updated_log,
-        "bid_logs": updated_bid_logs,
+        "debate_log": state.debate_log + [[next_speaker, dialogue]],
+        "bid_logs": state.bid_logs + bid_logs,
         "current_speaker": next_speaker,
         "step": state.step + 1,
         "phase": "vote" if state.step + 1 >= MAX_DEBATE_TURNS else "debate"
@@ -224,7 +214,7 @@ def vote_node(state: GameState, config: RunnableConfig) -> GameState:
 You are {voter}. Here's the debate so far:
 {state.debate_log}
 
-Vote for who you think is the werewolf. Just output a name.
+Vote for who you think is the werewolf. Only output a name.
 """
         vote, log = player_objects[voter].vote()
         votes[voter] = vote
@@ -253,7 +243,7 @@ def exile_node(state: GameState, _: RunnableConfig) -> GameState:
     if exiled:
         msg = f"The majority voted to remove {exiled} from the game."
     else:
-        msg = "No majority reached. No one was removed."
+        msg = "No majority. No one was removed."
 
     tqdm.tqdm.write(msg)
 
@@ -277,7 +267,7 @@ def check_winner_day_node(state: GameState, _: RunnableConfig) -> GameState:
     return state.model_copy(update={
         "winner": winner,
         "phase": "summarize" if winner else "eliminate",
-        "step": 0  # reset debate step
+        "step": 0  
     })
 
 def summary_node(state: GameState, config: RunnableConfig) -> GameState:
@@ -320,7 +310,6 @@ graph.add_node("check_winner_day", check_winner_node)
 graph.add_node("summarize", summarize_node)
 graph.add_node("end", end_node)
 
-# Entry point
 graph.set_entry_point("eliminate")
 
 # Routing 
