@@ -11,7 +11,7 @@ No setup or scripting needed, just install dependencies and run!
 
 ```bash
 git clone https://github.com/your-username/DetectionBenchmark.git
-cd werewolf-llm-game
+cd DetectionBenchmark
 ```
 
 ### 2. Set Your Gemini API Key
