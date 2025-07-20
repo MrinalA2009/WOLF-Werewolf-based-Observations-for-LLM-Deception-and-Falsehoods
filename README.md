@@ -59,7 +59,7 @@ And paste in this initial content:
 
 ---
 
-### 5. ▶️ Run the Game
+### 5. Run Game
 
 run:
 
