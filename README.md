@@ -120,7 +120,7 @@ You can use this log for auditing, visualization, or game summaries.
 ## Roles 
 
 - **Villager**: Votes and debates honestly
-- **Werewolf**: Kills at night and lies during the day
+- **Werewolf**: Kills at night and blends in during the day
 - **Seer**: Can reveal one player's role per night
 - **Doctor**: Can protect one player per night
 
