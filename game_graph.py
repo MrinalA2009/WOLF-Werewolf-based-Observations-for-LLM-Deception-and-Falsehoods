@@ -365,10 +365,10 @@ def end_node(state: GameState, _: RunnableConfig) -> GameState:
         print(f"{turn[0]}: {turn[1]}")
 
     # Write logs to file
-    with open("werewolf_game_log.json", "w") as f:
+    with open("game_log.json", "w") as f:
         json.dump(state.game_logs, f, indent=2)
 
-    print("\nFull game log saved to werewolf_game_log.json")
+    print("\nFull game log saved to game_log.json")
     return state
 
 #game state LangChain graph
