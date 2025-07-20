@@ -23,6 +23,7 @@ from langgraph.graph import StateGraph, END
 from collections import Counter
 from Bidding import get_bid, choose_next_speaker
 from concurrent.futures import ThreadPoolExecutor
+import json
 
 class GameState(BaseModel):
     round_num: int = 0
@@ -292,6 +293,12 @@ def end_node(state: GameState, _: RunnableConfig) -> GameState:
     print("\nDebate Log:")
     for turn in state.debate_log:
         print(f"{turn[0]}: {turn[1]}")
+
+    # Write logs to file
+    with open("werewolf_game_log.json", "w") as f:
+        json.dump(state.game_logs, f, indent=2)
+
+    print("\nFull game log saved to werewolf_game_log.json")
     return state
 
 #game state LangChain graph
