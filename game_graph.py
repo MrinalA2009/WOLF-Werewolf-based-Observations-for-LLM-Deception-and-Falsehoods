@@ -79,17 +79,25 @@ def eliminate_node(state: GameState, config: RunnableConfig) -> GameState:
 
     tqdm.tqdm.write(f"{acting_wolf} eliminated {eliminated}")
 
+
    # temp for sharing who was eliminated during the night
     for wolf in alive_wolves:
         player_objects[wolf]._add_observation(
             f"During the night, we decided to eliminate {eliminated}."
         )
 
-    return state.model_copy(update={
+    state = state.model_copy(update={
         "eliminated": eliminated,
         "eliminate_log": log,
         "phase": "protect"
     })
+    state = log_event(state, "eliminate", acting_wolf, {
+    "target": eliminated,
+    "raw_output": log
+    })
+    
+    return state
+    
 def protect_node(state: GameState, config: RunnableConfig) -> GameState:
     """Doctor chooses a player to save during the same night."""
     player_objects = config["player_objects"]
@@ -106,11 +114,19 @@ def protect_node(state: GameState, config: RunnableConfig) -> GameState:
 
     tqdm.tqdm.write(f"{doctor_name} protected {protect_target}")
 
-    return state.model_copy(update={
+    state =  state.model_copy(update={
         "protected": protect_target,
         "protect_log": log,
         "phase": "unmask"
     })
+
+    state = log_event(state, "protect", doctor_name, {
+    "target": protect_target,
+    "raw_output": log
+    })
+
+    return state
+    
 def unmask_node(state: GameState, config: RunnableConfig) -> GameState:
     """Seer investigates one player each night."""
     player_objects = config["player_objects"]
@@ -128,11 +144,20 @@ def unmask_node(state: GameState, config: RunnableConfig) -> GameState:
     role_revealed = state.roles[target]
     player_objects[seer_name].reveal_and_update(target, role_revealed)
 
-    return state.model_copy(update={
+    state =  state.model_copy(update={
         "unmasked": target,
         "unmask_log": log,
         "phase": "resolve_night"
     })
+
+    state = log_event(state, "unmask", seer_name, {
+    "target": target,
+    "revealed_role": state.roles[target],
+    "raw_output": log
+    })
+    
+    return state
+    
 def night_node(state: GameState, _: RunnableConfig) -> GameState:
     """Apply elimination/protection outcome and broadcast announcement."""
     if state.eliminated and state.eliminated != state.protected:
@@ -147,10 +172,17 @@ def night_node(state: GameState, _: RunnableConfig) -> GameState:
 
     tqdm.tqdm.write(announcement)
 
-    return state.model_copy(update={
+    state = state.model_copy(update={
         "alive_players": new_alive,
         "phase": "check_winner_night"
     })
+
+    state = log_event(state, "resolve_night", "system", {
+    "announcement": announcement
+    })
+    
+    return state
+    
 def checkwinner_node(state: GameState, _: RunnableConfig) -> GameState:
     """Return to day phase or finish game if a faction wins."""
     wolves_alive = [p for p in state.werewolves if p in state.alive_players]
@@ -165,12 +197,17 @@ def checkwinner_node(state: GameState, _: RunnableConfig) -> GameState:
 
     next_phase = "debate" if not winner else "summarize"  # ends/explains  if completed
 
-    return state.model_copy(update={
+    state = state.model_copy(update={
         "winner": winner,
         "phase": next_phase,
         "step": 0        
     })
 
+    state = log_event(state, "check_winner_night", "system", {
+        "winner": winner
+    })
+    return state
+    
 def debate_node(state: GameState, config: RunnableConfig) -> GameState:
     player_objects = config["player_objects"]
     MAX_DEBATE_TURNS = config.get("MAX_DEBATE_TURNS", 6)
@@ -197,13 +234,21 @@ def debate_node(state: GameState, config: RunnableConfig) -> GameState:
 
     tqdm.tqdm.write(f"{next_speaker}: {dialogue}")
 
-    return state.model_copy(update={
+    state = state.model_copy(update={
         "debate_log": state.debate_log + [[next_speaker, dialogue]],
         "bid_logs": state.bid_logs + bid_logs,
         "current_speaker": next_speaker,
         "step": state.step + 1,
         "phase": "vote" if state.step + 1 >= MAX_DEBATE_TURNS else "debate"
     })
+    
+    state = log_event(state, "debate", next_speaker, {
+    "dialogue": dialogue,
+    "bids": bid_dict,
+    "raw_output": log
+    })
+    
+    return state
 
 def vote_node(state: GameState, config: RunnableConfig) -> GameState:
     player_objects = config["player_objects"]
@@ -221,12 +266,18 @@ Vote for who you think is the werewolf. Only output a name.
         votes[voter] = vote
         logs.append(f"{voter} voted for {vote} – {log}")
 
-    return state.model_copy(update={
+    state = state.model_copy(update={
         "votes": votes,
         "vote_logs": logs,
         "phase": "exile"
     })
 
+    state = log_event(state, "vote", "system", {
+    "votes": votes
+    })
+    
+    return state
+    
 def exile_node(state: GameState, _: RunnableConfig) -> GameState:
     if not state.votes:
         raise ValueError("No votes found.")
@@ -248,11 +299,18 @@ def exile_node(state: GameState, _: RunnableConfig) -> GameState:
 
     tqdm.tqdm.write(msg)
 
-    return state.model_copy(update={
+    state = state.model_copy(update={
         "exiled": exiled,
         "alive_players": new_alive,
         "phase": "check_winner_day"
     })
+
+    state = log_event(state, "exile", "system", {
+    "exiled": exiled,
+    "vote_tally": dict(tally)
+    })
+
+    return state
 
 def check_winner_day_node(state: GameState, _: RunnableConfig) -> GameState:
     wolves_alive = [p for p in state.werewolves if p in state.alive_players]
@@ -265,11 +323,17 @@ def check_winner_day_node(state: GameState, _: RunnableConfig) -> GameState:
     else:
         winner = None
 
-    return state.model_copy(update={
+    state = state.model_copy(update={
         "winner": winner,
         "phase": "summarize" if winner else "eliminate",
         "step": 0  
     })
+
+    state = log_event(state, "check_winner_day", "system", {
+    "winner": winner
+    })
+    
+    return state
 
 def summary_node(state: GameState, config: RunnableConfig) -> GameState:
     player_objects = config["player_objects"]
@@ -279,10 +343,16 @@ def summary_node(state: GameState, config: RunnableConfig) -> GameState:
         summary, log = player_objects[player].summarize()
         logs.append(f"{player}: {summary} – {log}")
 
-    return state.model_copy(update={
+    state = state.model_copy(update={
         "summaries": logs,
         "phase": "end"
     })
+
+    state = log_event(state, "summarize", "system", {
+    "summaries": logs
+    })
+
+    return state
 
 def end_node(state: GameState, _: RunnableConfig) -> GameState:
     print("\n--- GAME OVER ---")
