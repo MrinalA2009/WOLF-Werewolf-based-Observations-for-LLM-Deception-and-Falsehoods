@@ -10,7 +10,7 @@ No setup or scripting needed, just install dependencies and run!
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/werewolf-llm-game.git
+git clone https://github.com/your-username/DetectionBenchmark.git
 cd werewolf-llm-game
 ```
 
@@ -49,7 +49,7 @@ pip install langchain langgraph langchain-core langchain-google-genai tqdm pydan
 Make sure this file exists in the project root:
 
 ```bash
-touch werewolf_game_log.json
+touch game_log.json
 ```
 
 And paste in this initial content:
@@ -65,7 +65,7 @@ And paste in this initial content:
 run:
 
 ```bash
-python run_game.py
+python run.py
 ```
 
 The game will:
@@ -81,11 +81,11 @@ The game will:
 
 ```bash
 .
-├── run_game.py              # Main file to launch the game
-├── werewolf_graph.py       # LangChain state graph + nodes
-├── Player.py               # Role-based player behavior
-├── Bidding.py              # LLM bidding logic for speaker selection
-├── werewolf_game_log.json  # Game log (auto-generated)
+├── run.py                  # Main file to run  game
+├── game_graph.py           # LangChain state graph + nodes
+├── Player.py               # Player defs
+├── Bidding.py              # speaker selection
+├── game_log.json           # Game log (auto-generated)
 ├── README.md               # You're here
 ```
 
@@ -96,7 +96,7 @@ The game will:
 All gameplay is logged in:
 
 ```
-werewolf_game_log.json
+game_log.json
 ```
 
 Each log entry is JSON-formatted with timestamps, actor, action, and raw LLM responses. Example:
