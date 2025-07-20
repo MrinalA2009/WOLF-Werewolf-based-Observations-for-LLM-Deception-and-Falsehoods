@@ -1,7 +1,6 @@
-# Werewolf LLM Game (LangChain Edition)
+# Werewolf Deception Detection Game (need to come up with name)
 
-A fully automated, LLM-driven version of the classic **Werewolf social deduction game**, powered by Gemini and structured with LangChain’s state-graph architecture.  
-No setup or scripting needed, just install dependencies and run!
+needa make description
 
 ---
 
