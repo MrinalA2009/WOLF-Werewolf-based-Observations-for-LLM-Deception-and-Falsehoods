@@ -1,6 +1,5 @@
 # Werewolf Deception Detection Game (need to come up with name)
 
-## Deception Detection
 # Deception Detection System for Werewolf Game
 
 This implementation adds a comprehensive deception detection system to the Werewolf game that analyzes every statement made by models and tracks their deceptive behavior over time.
