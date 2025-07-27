@@ -31,7 +31,10 @@ initial_state = GameState(
     werewolves=werewolves,
     seer=seer,
     doctor=doctor,
-    phase="eliminate"
+    phase="eliminate",
+    game_logs=[],
+    deception_history={},
+    deception_scores={}
 )
 
 runnable = graph.compile()

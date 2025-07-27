@@ -155,15 +155,44 @@ Respond in JSON with keys:
         self.scratchpad.append(result.get("analysis", ""))
         self.statements.append(statement)
         return statement, result
+    
+    def get_deception_perception(self, other_player: str, deception_scores: Dict[str, Dict[str, float]]) -> float:
+        """
+        Get this player's perception of another player's deceptiveness.
+        
+        Args:
+            other_player: Name of the player to get perception of
+            deception_scores: Current deception scores from game state
+            
+        Returns:
+            Float between 0.0 (trustworthy) and 1.0 (deceptive)
+        """
+        if self.name in deception_scores and other_player in deception_scores[self.name]:
+            return deception_scores[self.name][other_player]
+        return 0.5  # Default neutral perception
 
-    def vote(self) -> (str, dict):
+    def vote(self, deception_scores: Dict[str, Dict[str, float]] = None) -> (str, dict):
+        # Include deception perception in voting decision
+        deception_info = ""
+        if deception_scores and self.name in deception_scores:
+            deception_perceptions = []
+            for player, score in deception_scores[self.name].items():
+                if score > 0.6:
+                    deception_perceptions.append(f"{player} seems deceptive (suspicion: {score:.2f})")
+                elif score < 0.4:
+                    deception_perceptions.append(f"{player} seems trustworthy (suspicion: {score:.2f})")
+            
+            if deception_perceptions:
+                deception_info = f"\nYour deception perceptions: {'; '.join(deception_perceptions)}"
+        
         prompt = f"""
 You are {self.name} ({self.role}).
-Based on the debate and observations, vote for who you think is the werewolf.
+Based on the debate and observations, vote for who you think is the werewolf.{deception_info}
 Respond in JSON with keys:
   - "vote": name of player you vote to exile (string)
   - "is_deceptive": true if you lie about your vote choice, false otherwise
   - "analysis": your private reasoning for this vote (string)
+  - "reasoning": brief public explanation of your vote choice (string)
 """
         result = self.call_model(prompt)
         vote_choice = result.get("vote", "")
