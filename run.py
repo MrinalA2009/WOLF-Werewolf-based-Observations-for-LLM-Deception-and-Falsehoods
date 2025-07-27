@@ -1,7 +1,9 @@
 from game_graph import graph, GameState  
 from player import Player             
 from langchain_google_genai import ChatGoogleGenerativeAI
+import os
 
+os.environ["GOOGLE_API_KEY"] = "AIzaSyAwjHr_8ucLsNTutTvTm64JRnJCj5b_ngs"
 llm = ChatGoogleGenerativeAI(
     model="google_genai:gemini-2.0-flash",
     temperature=0.7
