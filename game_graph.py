@@ -24,6 +24,119 @@ from collections import Counter
 from Bidding import get_bid, choose_next_speaker
 from concurrent.futures import ThreadPoolExecutor
 import json
+from logs import log_event
+from deception_detection import DeceptionDetector, update_deception_history
+from datetime import datetime
+
+def analyze_statement_deception(state: GameState, speaker_name: str, statement: str, 
+                               player_objects: Dict, config: RunnableConfig) -> GameState:
+    """
+    Analyze a statement for deception using self-analysis and peer analysis.
+    """
+    # Initialize deception detector with the same LLM used by players
+    detector = DeceptionDetector(player_objects[speaker_name].llm)
+    
+    # Get context about the current game state
+    context = f"Round {state.round_num}, Phase: {state.phase}. Alive players: {', '.join(state.alive_players)}."
+    if state.debate_log:
+        recent_dialogue = state.debate_log[-3:]  # Last 3 statements for context
+        context += f" Recent dialogue: {'; '.join([f'{s}: {d}' for s, d in recent_dialogue])}"
+    
+    # 1. Self-analysis: Ask the speaker to analyze their own statement
+    self_analysis = detector.analyze_self_deception(speaker_name, statement, context)
+    
+    # 2. Peer analysis: Ask all other alive players to analyze the statement
+    other_players = [p for p in state.alive_players if p != speaker_name]
+    other_analyses = {}
+    
+    # Run peer analyses in parallel for efficiency
+    with ThreadPoolExecutor(max_workers=len(other_players)) as executor:
+        futures = {}
+        for observer in other_players:
+            # Get this observer's history of the speaker for context
+            speaker_history = state.deception_history.get(speaker_name, [])
+            futures[observer] = executor.submit(
+                detector.analyze_other_deception,
+                observer, speaker_name, statement, context, speaker_history
+            )
+        
+        for observer, future in futures.items():
+            try:
+                analysis = future.result()
+                analysis["timestamp"] = datetime.utcnow().isoformat()
+                other_analyses[observer] = analysis
+            except Exception as e:
+                # Fallback analysis in case of error
+                other_analyses[observer] = {
+                    "chain_of_thought": f"Analysis failed: {str(e)}",
+                    "is_deceptive": 0,
+                    "confidence": 0.0,
+                    "deception_type": "none",
+                    "reasoning": "Analysis error",
+                    "suspicion_level": 0.5,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+    
+    # 3. Update deception history and scores
+    state = update_deception_history(state, speaker_name, statement, self_analysis, other_analyses)
+    
+    # 4. Log the deception analysis
+    state = log_event(state, "deception_analysis", speaker_name, {
+        "statement": statement,
+        "self_analysis": self_analysis,
+        "other_analyses": other_analyses
+    })
+    
+    # Print summary for debugging/monitoring
+    deception_count = sum(1 for analysis in other_analyses.values() if analysis.get("is_deceptive", 0) == 1)
+    tqdm.tqdm.write(f"   Deception Analysis: {deception_count}/{len(other_analyses)} observers think it's deceptive")
+    
+    return state
+def generate_deception_summary(state: GameState) -> Dict:
+    """
+    Generate a summary of deception patterns and perceptions throughout the game.
+    """
+    summary = {
+        "total_statements_analyzed": 0,
+        "deception_by_player": {},
+        "final_deception_scores": state.deception_scores,
+        "deception_patterns": {}
+    }
+    
+    # Analyze deception history
+    for player, history in state.deception_history.items():
+        player_summary = {
+            "total_statements": len(history),
+            "self_reported_deceptions": 0,
+            "peer_detected_deceptions": 0,
+            "average_suspicion": 0.0
+        }
+        
+        total_suspicion = 0
+        suspicion_count = 0
+        
+        for record in history:
+            # Count self-reported deceptions
+            if record["self_analysis"].get("is_deceptive", 0) == 1:
+                player_summary["self_reported_deceptions"] += 1
+            
+            # Count peer-detected deceptions
+            for peer_analysis in record["other_analyses"].values():
+                if peer_analysis.get("is_deceptive", 0) == 1:
+                    player_summary["peer_detected_deceptions"] += 1
+                
+                # Track suspicion levels
+                suspicion = peer_analysis.get("suspicion_level", 0.5)
+                total_suspicion += suspicion
+                suspicion_count += 1
+        
+        if suspicion_count > 0:
+            player_summary["average_suspicion"] = total_suspicion / suspicion_count
+            
+        summary["deception_by_player"][player] = player_summary
+        summary["total_statements_analyzed"] += len(history)
+    
+    return summary
 
 class GameState(BaseModel):
     round_num: int = 0
@@ -52,6 +165,12 @@ class GameState(BaseModel):
     eliminate_log: Optional[str] = None
     unmask_log: Optional[str] = None
 
+    # Game logs for structured logging
+    game_logs: List[Dict] = Field(default_factory=list)
+
+    # Deception tracking
+    deception_history: Dict[str, List[Dict]] = Field(default_factory=dict)  # {player: [deception_records]}
+    deception_scores: Dict[str, Dict[str, float]] = Field(default_factory=dict)  # {observer: {target: score}}
     current_speaker: Optional[str] = None
     winner: Optional[Literal["Villagers", "Werewolves"]] = None
 
@@ -228,12 +347,15 @@ def debate_node(state: GameState, config: RunnableConfig) -> GameState:
             bid_logs.append(f"{name} bid {bid} – {raw_output}")
 
     next_speaker = choose_next_speaker(bid_dict, dialogue_history)
-    dialogue, log = player_objects[next_speaker].debate()
+    dialogue, log = player_objects[next_speaker].debate(state.debate_log)
     if not dialogue:
         raise ValueError(f"{next_speaker} failed to produce a debate line.")
 
     tqdm.tqdm.write(f"{next_speaker}: {dialogue}")
 
+    # DECEPTION ANALYSIS: Analyze the statement made by the speaker
+    state = analyze_statement_deception(state, next_speaker, dialogue, player_objects, config)
+    
     state = state.model_copy(update={
         "debate_log": state.debate_log + [[next_speaker, dialogue]],
         "bid_logs": state.bid_logs + bid_logs,
@@ -256,16 +378,17 @@ def vote_node(state: GameState, config: RunnableConfig) -> GameState:
     logs = []
 
     for voter in state.alive_players:
-        prompt = f"""
-You are {voter}. Here's the debate so far:
-{state.debate_log}
-
-Vote for who you think is the werewolf. Only output a name.
-"""
-        vote, log = player_objects[voter].vote()
+        
+        vote, log = player_objects[voter].vote(state.deception_scores)
         votes[voter] = vote
         logs.append(f"{voter} voted for {vote} – {log}")
-
+       
+        # DECEPTION ANALYSIS: Analyze voting statements (if they contain reasoning)
+        # Note: Votes might not always warrant deception analysis unless they include reasoning
+        vote_statement = f"I vote for {vote}"
+        if "reasoning" in log and log.get("reasoning"):
+            vote_statement += f" because {log.get('reasoning', '')}"
+            state = analyze_statement_deception(state, voter, vote_statement, player_objects, config)
     state = state.model_copy(update={
         "votes": votes,
         "vote_logs": logs,
@@ -342,6 +465,9 @@ def summary_node(state: GameState, config: RunnableConfig) -> GameState:
     for player in state.alive_players:
         summary, log = player_objects[player].summarize()
         logs.append(f"{player}: {summary} – {log}")
+    
+    # Generate deception summary
+    deception_summary = generate_deception_summary(state)
 
     state = state.model_copy(update={
         "summaries": logs,
@@ -349,7 +475,8 @@ def summary_node(state: GameState, config: RunnableConfig) -> GameState:
     })
 
     state = log_event(state, "summarize", "system", {
-    "summaries": logs
+    "summaries": logs,
+    "deception_summary": deception_summary
     })
 
     return state
@@ -363,6 +490,22 @@ def end_node(state: GameState, _: RunnableConfig) -> GameState:
     print("\nDebate Log:")
     for turn in state.debate_log:
         print(f"{turn[0]}: {turn[1]}")
+  
+    # Print deception analysis summary
+    deception_summary = generate_deception_summary(state)
+    print(f"\n--- DECEPTION ANALYSIS SUMMARY ---")
+    print(f"Total statements analyzed: {deception_summary['total_statements_analyzed']}")
+    
+    for player, stats in deception_summary['deception_by_player'].items():
+        print(f"\n{player} ({state.roles.get(player, 'Unknown')}):")
+        print(f"  - Statements made: {stats['total_statements']}")
+        print(f"  - Self-reported deceptions: {stats['self_reported_deceptions']}")
+        print(f"  - Peer-detected deceptions: {stats['peer_detected_deceptions']}")
+        print(f"  - Average suspicion level: {stats['average_suspicion']:.2f}")
+    
+    print(f"\nFinal deception scores (how each player perceives others):")
+    for observer, scores in state.deception_scores.items():
+        print(f"{observer}: {', '.join([f'{target}={score:.2f}' for target, score in scores.items()])}")
 
     # Write logs to file
     with open("game_log.json", "w") as f:
@@ -378,13 +521,13 @@ graph = StateGraph(GameState)
 graph.add_node("eliminate", eliminate_node)
 graph.add_node("protect", protect_node)
 graph.add_node("unmask", unmask_node)
-graph.add_node("resolve_night", resolve_night_node)
-graph.add_node("check_winner_night", check_winner_node)
+graph.add_node("resolve_night", night_node)
+graph.add_node("check_winner_night", checkwinner_node)
 graph.add_node("debate", debate_node)
 graph.add_node("vote", vote_node)
 graph.add_node("exile", exile_node)
-graph.add_node("check_winner_day", check_winner_node)
-graph.add_node("summarize", summarize_node)
+graph.add_node("check_winner_day", check_winner_day_node)
+graph.add_node("summarize", summary_node)
 graph.add_node("end", end_node)
 
 graph.set_entry_point("eliminate")
@@ -395,11 +538,11 @@ graph.add_conditional_edges("protect", lambda s: s.phase)
 graph.add_conditional_edges("unmask", lambda s: s.phase)
 graph.add_conditional_edges("resolve_night", lambda s: s.phase)
 graph.add_conditional_edges("check_winner_night", lambda s: s.phase)
-graph.add_conditional_edges("debate", lambda s: "vote" if s.step >= MAX_DEBATE_TURNS else "debate")
-graph.add_conditional_edges("vote", lambda s: "exile")
-graph.add_conditional_edges("exile", lambda s: "check_winner_day")
-graph.add_conditional_edges("check_winner_day", lambda s: "summarize" if s.winner else "eliminate")
-graph.add_conditional_edges("summarize", lambda s: "end")
+graph.add_conditional_edges("debate", lambda s: s.phase)
+graph.add_conditional_edges("vote", lambda s: s.phase)
+graph.add_conditional_edges("exile", lambda s: s.phase)
+graph.add_conditional_edges("check_winner_day", lambda s: s.phase)
+graph.add_conditional_edges("summarize", lambda s: s.phase)
 graph.add_edge("end", END)
 
 

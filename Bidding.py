@@ -1,8 +1,14 @@
 import random
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-# Gemini model setup
-llm = ChatGoogleGenerativeAI(model="google_genai:gemini-2.0-flash", temperature=0.7)
+# Gemini model setup - initialize lazily
+_llm = None
+
+def get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGoogleGenerativeAI(model="google_genai:gemini-2.0-flash", temperature=0.7)
+    return _llm
 
 def get_bid(player_name: str, dialogue_history: str):
     """
@@ -22,7 +28,7 @@ How strongly do you want to speak next? Return a single number from 0 to 10.
 Only respond with the number. Do not explain.
 """
 
-    response = llm.invoke(prompt).content.strip()
+    response = get_llm().invoke(prompt).content.strip()
     try:
         bid = int(response)
         bid = max(0, min(10, bid))

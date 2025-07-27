@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Dict, Optional
 
-def log_event(state: GameState, event_type: str, actor: Optional[str], content: Dict) -> GameState:
+def log_event(state, event_type: str, actor: Optional[str], content: Dict):
     entry = {
         "timestamp": datetime.utcnow().isoformat(),
         "round": state.round_num,
