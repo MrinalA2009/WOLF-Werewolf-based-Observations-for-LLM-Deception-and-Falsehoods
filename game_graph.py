@@ -33,27 +33,26 @@ def analyze_statement_deception(state: GameState, speaker_name: str, statement: 
     """
     Analyze a statement for deception using self-analysis and peer analysis.
     """
-    # Initialize deception detector with the same LLM used by players
+    # Initialize deception detector 
     detector = DeceptionDetector(player_objects[speaker_name].llm)
     
-    # Get context about the current game state
     context = f"Round {state.round_num}, Phase: {state.phase}. Alive players: {', '.join(state.alive_players)}."
     if state.debate_log:
         recent_dialogue = state.debate_log[-3:]  # Last 3 statements for context
         context += f" Recent dialogue: {'; '.join([f'{s}: {d}' for s, d in recent_dialogue])}"
     
-    # 1. Self-analysis: Ask the speaker to analyze their own statement
+    # Ask  speaker to analyze their own statement
     self_analysis = detector.analyze_self_deception(speaker_name, statement, context)
     
-    # 2. Peer analysis: Ask all other alive players to analyze the statement
+    # Ask all other alive players to analyze the statement
     other_players = [p for p in state.alive_players if p != speaker_name]
     other_analyses = {}
     
-    # Run peer analyses in parallel for efficiency
+    # Run analyses in parallel
     with ThreadPoolExecutor(max_workers=len(other_players)) as executor:
         futures = {}
         for observer in other_players:
-            # Get this observer's history of the speaker for context
+            # Get observer's history 
             speaker_history = state.deception_history.get(speaker_name, [])
             futures[observer] = executor.submit(
                 detector.analyze_other_deception,
@@ -66,7 +65,7 @@ def analyze_statement_deception(state: GameState, speaker_name: str, statement: 
                 analysis["timestamp"] = datetime.utcnow().isoformat()
                 other_analyses[observer] = analysis
             except Exception as e:
-                # Fallback analysis in case of error
+                # Fallback 
                 other_analyses[observer] = {
                     "chain_of_thought": f"Analysis failed: {str(e)}",
                     "is_deceptive": 0,
@@ -77,17 +76,15 @@ def analyze_statement_deception(state: GameState, speaker_name: str, statement: 
                     "timestamp": datetime.utcnow().isoformat()
                 }
     
-    # 3. Update deception history and scores
     state = update_deception_history(state, speaker_name, statement, self_analysis, other_analyses)
     
-    # 4. Log the deception analysis
     state = log_event(state, "deception_analysis", speaker_name, {
         "statement": statement,
         "self_analysis": self_analysis,
         "other_analyses": other_analyses
     })
     
-    # Print summary for debugging/monitoring
+    # Print summary 
     deception_count = sum(1 for analysis in other_analyses.values() if analysis.get("is_deceptive", 0) == 1)
     tqdm.tqdm.write(f"   Deception Analysis: {deception_count}/{len(other_analyses)} observers think it's deceptive")
     
@@ -165,7 +162,7 @@ class GameState(BaseModel):
     eliminate_log: Optional[str] = None
     unmask_log: Optional[str] = None
 
-    # Game logs for structured logging
+    # Game logs 
     game_logs: List[Dict] = Field(default_factory=list)
 
     # Deception tracking

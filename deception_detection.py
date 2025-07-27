@@ -49,7 +49,7 @@ Respond in this exact JSON format:
         
         try:
             result = json.loads(response)
-            # Ensure required fields and validate types
+            # required fields and validate types
             result.setdefault("chain_of_thought", "")
             result.setdefault("is_deceptive", 0)
             result.setdefault("confidence", 0.5)
@@ -62,7 +62,7 @@ Respond in this exact JSON format:
             
             return result
         except (json.JSONDecodeError, ValueError, KeyError) as e:
-            # Fallback for malformed JSON
+            # Fallback 
             return {
                 "chain_of_thought": f"Failed to parse response: {response}",
                 "is_deceptive": 0,
@@ -89,7 +89,7 @@ Respond in this exact JSON format:
         """
         history_text = ""
         if history:
-            recent_history = history[-3:]  # Only consider last 3 assessments
+            recent_history = history[-3:]  
             history_items = []
             for h in recent_history:
                 deceptive = "deceptive" if h.get("is_deceptive", 0) == 1 else "truthful"
@@ -124,7 +124,7 @@ Respond in this exact JSON format:
         
         try:
             result = json.loads(response)
-            # Ensure required fields and validate types
+            # required fields and validate types
             result.setdefault("chain_of_thought", "")
             result.setdefault("is_deceptive", 0)
             result.setdefault("confidence", 0.5)
@@ -139,7 +139,7 @@ Respond in this exact JSON format:
             
             return result
         except (json.JSONDecodeError, ValueError, KeyError) as e:
-            # Fallback for malformed JSON
+            # Fallback 
             return {
                 "chain_of_thought": f"Failed to parse response: {response}",
                 "is_deceptive": 0,
@@ -165,7 +165,7 @@ def update_deception_history(state, player_name: str, statement: str,
     Returns:
         Updated game state
     """
-    # Create deception record
+
     deception_record = {
         "statement": statement,
         "round": state.round_num,
@@ -175,19 +175,19 @@ def update_deception_history(state, player_name: str, statement: str,
         "timestamp": other_analyses.get(list(other_analyses.keys())[0], {}).get("timestamp", "")
     }
     
-    # Update deception history
+    # Update history
     new_history = state.deception_history.copy()
     if player_name not in new_history:
         new_history[player_name] = []
     new_history[player_name].append(deception_record)
     
-    # Update deception scores (how each observer perceives each player)
+    # Update deception scores (how each observer perceives the other players)
     new_scores = state.deception_scores.copy()
     for observer, analysis in other_analyses.items():
         if observer not in new_scores:
             new_scores[observer] = {}
         
-        # Update score for this player based on the analysis
+        # Update score 
         current_score = new_scores[observer].get(player_name, 0.5)
         new_assessment = analysis.get("suspicion_level", 0.5)
         # Weighted average: 70% new assessment, 30% historical
