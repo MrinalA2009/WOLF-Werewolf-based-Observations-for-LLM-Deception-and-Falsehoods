@@ -16,7 +16,7 @@ def get_llm(model_name="google_genai:gemini-2.0-flash", api_key=None):
         temperature=0.7
     )
 
-def run_werewolf_game(model_name="gemini-pro", api_key=None):
+def run_werewolf_game(model_name="google_genai:gemini-2.0-flash", api_key=None):
     """Run a werewolf game with the specified model."""
     print(f"🎮 Starting Werewolf Game with model: {model_name}")
     
@@ -71,8 +71,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Werewolf Game with AI players")
     parser.add_argument(
         "--model", 
-        default="gemini-pro",
-        help="Model to use (default: gemini-pro). Options: gemini-pro, gemini-1.5-pro, gemini-1.5-flash"
+        default="google_genai:gemini-2.0-flash",
+        help="Model to use (default: "google_genai:gemini-2.0-flash"). Options: gemini-pro, gemini-1.5-pro, gemini-1.5-flash"
     )
     parser.add_argument(
         "--api-key",
