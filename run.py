@@ -4,7 +4,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 import argparse
 
-def get_llm(model_name="gemini-pro", api_key=None):
+def get_llm(model_name="google_genai:gemini-2.0-flash", api_key=None):
     """Initialize the language model with configurable parameters."""
     if api_key:
         os.environ["GOOGLE_API_KEY"] = api_key
