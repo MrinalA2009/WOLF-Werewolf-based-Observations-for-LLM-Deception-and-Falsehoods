@@ -7,7 +7,7 @@ _llm = None
 def get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatGoogleGenerativeAI(model="google_genai:gemini-2.0-flash", temperature=0.7)
+        _llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.7)
     return _llm
 
 def get_bid(player_name: str, dialogue_history: str):
