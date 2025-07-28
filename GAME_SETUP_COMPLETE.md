@@ -1,26 +1,3 @@
-# 🎮 Werewolf AI Game - Setup Complete!
-
-## ✅ Issues Fixed
-
-1. **Main Issue: Wrong command syntax**
-   - ❌ **Before:** `bash run.py` (trying to run Python with bash)
-   - ✅ **After:** `python run.py` (correct Python execution)
-
-2. **Python Environment Setup**
-   - ✅ Virtual environment created and configured
-   - ✅ All dependencies installed via `pip install -r requirements.txt`
-   - ✅ Python imports and class annotations fixed
-
-3. **Model Configuration**
-   - ✅ Updated model names to correct format (no `google_genai:` prefix)
-   - ✅ Default model changed to `gemini-1.5-flash` (available model)
-   - ✅ Added model switching capability with `--model` parameter
-
-4. **Code Structure Fixes**
-   - ✅ Fixed Pydantic `ClassVar` annotations in `player.py`
-   - ✅ Fixed `GameState` import order in `game_graph.py`
-   - ✅ Fixed LangGraph config access pattern
-
 ## 🚀 How to Run the Game
 
 ### Method 1: Using the Startup Script (Recommended)
