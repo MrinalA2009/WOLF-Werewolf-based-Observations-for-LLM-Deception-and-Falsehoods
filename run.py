@@ -85,7 +85,7 @@ if __name__ == "__main__":
         # If no API key provided via args, try to use the existing one from the file (temporarily)
         if not args.api_key and not os.environ.get("GOOGLE_API_KEY"):
             # Temporarily use the key from your original file for testing
-            args.api_key = "AIzaSyAwjHr_8ucLsNTutTvTm64JRnJCj5b_ngs"
+            args.api_key = "AIzaSyAO_DPLwLl0RQF1h0EPm9yBgSJnicriA8k"
             print("⚠️  Using embedded API key for testing. Please set GOOGLE_API_KEY environment variable for production use.")
         
         final_state = run_werewolf_game(args.model, args.api_key)
