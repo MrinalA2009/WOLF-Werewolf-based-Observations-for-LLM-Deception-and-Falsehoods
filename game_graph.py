@@ -28,6 +28,49 @@ from logs import log_event
 from deception_detection import DeceptionDetector, update_deception_history
 from datetime import datetime
 
+class GameState(BaseModel):
+    round_num: int = 0
+    players: List[str] = []  # all players
+    alive_players: List[str] = []  # updated after each night/day
+    werewolves: List[str] = []
+    seer: Optional[str] = None
+    doctor: Optional[str] = None
+    roles: Dict[str, str] = {}  # {name: role}
+
+    # Logs
+    eliminated: Optional[str] = None
+    protected: Optional[str] = None
+    unmasked: Optional[str] = None
+    exiled: Optional[str] = None
+    votes: Dict[str, str] = {}  # voter: target
+    bids: List[Dict[str, int]] = []  # list per turn
+    debate_log: List[List[str]] = []  # [[speaker, dialogue]]
+    summaries: List[str] = []
+
+    # Logs from LLM responses
+    vote_logs: List[str] = []
+    bid_logs: List[str] = []
+    summary_logs: List[str] = []
+    protect_log: Optional[str] = None
+    eliminate_log: Optional[str] = None
+    unmask_log: Optional[str] = None
+
+    # Game logs 
+    game_logs: List[Dict] = Field(default_factory=list)
+
+    # Deception tracking
+    deception_history: Dict[str, List[Dict]] = Field(default_factory=dict)  # {player: [deception_records]}
+    deception_scores: Dict[str, Dict[str, float]] = Field(default_factory=dict)  # {observer: {target: score}}
+    current_speaker: Optional[str] = None
+    winner: Optional[Literal["Villagers", "Werewolves"]] = None
+
+    phase: Literal[
+        "eliminate", "protect", "unmask", "resolve_night",
+        "check_winner_night", "debate", "vote", "exile",
+        "check_winner_day", "summarize"
+    ] = "eliminate"
+    step: int = 0 
+
 def analyze_statement_deception(state: GameState, speaker_name: str, statement: str, 
                                player_objects: Dict, config: RunnableConfig) -> GameState:
     """
@@ -134,52 +177,8 @@ def generate_deception_summary(state: GameState) -> Dict:
         summary["total_statements_analyzed"] += len(history)
     
     return summary
-
-class GameState(BaseModel):
-    round_num: int = 0
-    players: List[str] = []  # all players
-    alive_players: List[str] = []  # updated after each night/day
-    werewolves: List[str] = []
-    seer: Optional[str] = None
-    doctor: Optional[str] = None
-    roles: Dict[str, str] = {}  # {name: role}
-
-    # Logs
-    eliminated: Optional[str] = None
-    protected: Optional[str] = None
-    unmasked: Optional[str] = None
-    exiled: Optional[str] = None
-    votes: Dict[str, str] = {}  # voter: target
-    bids: List[Dict[str, int]] = []  # list per turn
-    debate_log: List[List[str]] = []  # [[speaker, dialogue]]
-    summaries: List[str] = []
-
-    # Logs from LLM responses
-    vote_logs: List[str] = []
-    bid_logs: List[str] = []
-    summary_logs: List[str] = []
-    protect_log: Optional[str] = None
-    eliminate_log: Optional[str] = None
-    unmask_log: Optional[str] = None
-
-    # Game logs 
-    game_logs: List[Dict] = Field(default_factory=list)
-
-    # Deception tracking
-    deception_history: Dict[str, List[Dict]] = Field(default_factory=dict)  # {player: [deception_records]}
-    deception_scores: Dict[str, Dict[str, float]] = Field(default_factory=dict)  # {observer: {target: score}}
-    current_speaker: Optional[str] = None
-    winner: Optional[Literal["Villagers", "Werewolves"]] = None
-
-    phase: Literal[
-        "eliminate", "protect", "unmask", "resolve_night",
-        "check_winner_night", "debate", "vote", "exile",
-        "check_winner_day", "summarize"
-    ] = "eliminate"
-    step: int = 0 
-
 def eliminate_node(state: GameState, config: RunnableConfig) -> GameState:
-    player_objects = config["player_objects"]
+    player_objects = config.get("configurable", {}).get("player_objects", {})
 
     alive_wolves = [
         name for name in state.werewolves if name in state.alive_players
@@ -216,7 +215,7 @@ def eliminate_node(state: GameState, config: RunnableConfig) -> GameState:
     
 def protect_node(state: GameState, config: RunnableConfig) -> GameState:
     """Doctor chooses a player to save during the same night."""
-    player_objects = config["player_objects"]
+    player_objects = config.get("configurable", {}).get("player_objects", {})
     doctor_name = state.doctor
 
     # check if doctor was killed 
@@ -245,7 +244,7 @@ def protect_node(state: GameState, config: RunnableConfig) -> GameState:
     
 def unmask_node(state: GameState, config: RunnableConfig) -> GameState:
     """Seer investigates one player each night."""
-    player_objects = config["player_objects"]
+    player_objects = config.get("configurable", {}).get("player_objects", {})
     seer_name = state.seer
 
     # check if seer is dead
@@ -325,8 +324,8 @@ def checkwinner_node(state: GameState, _: RunnableConfig) -> GameState:
     return state
     
 def debate_node(state: GameState, config: RunnableConfig) -> GameState:
-    player_objects = config["player_objects"]
-    MAX_DEBATE_TURNS = config.get("MAX_DEBATE_TURNS", 6)
+    player_objects = config.get("configurable", {}).get("player_objects", {})
+    MAX_DEBATE_TURNS = config.get("configurable", {}).get("MAX_DEBATE_TURNS", 6)
 
     dialogue_history = "\n".join([f"{s}: {t}" for s, t in state.debate_log])
     last_speaker = state.debate_log[-1][0] if state.debate_log else None
@@ -370,7 +369,7 @@ def debate_node(state: GameState, config: RunnableConfig) -> GameState:
     return state
 
 def vote_node(state: GameState, config: RunnableConfig) -> GameState:
-    player_objects = config["player_objects"]
+    player_objects = config.get("configurable", {}).get("player_objects", {})
     votes = {}
     logs = []
 
@@ -456,7 +455,7 @@ def check_winner_day_node(state: GameState, _: RunnableConfig) -> GameState:
     return state
 
 def summary_node(state: GameState, config: RunnableConfig) -> GameState:
-    player_objects = config["player_objects"]
+    player_objects = config.get("configurable", {}).get("player_objects", {})
     logs = []
 
     for player in state.alive_players:

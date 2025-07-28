@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Literal
+from typing import Dict, List, Optional, Literal, ClassVar
 import json
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -13,7 +13,7 @@ class Player(BaseModel):
     suspicions: Dict[str, float] = Field(default_factory=dict)
     investigations: Optional[List[str]] = None
 
-    VILLAGER_PROMPT_TEMPLATE = """
+    VILLAGER_PROMPT_TEMPLATE: ClassVar[str] = """
 You are {name}, a Villager.
 Your goal is to find and eliminate the Werewolves.
 You must speak honestly about your suspicions.
@@ -23,7 +23,7 @@ Each round, you will:
 Stay consistent and truthful.
 """
 
-    WEREWOLF_PROMPT_TEMPLATE = """
+    WEREWOLF_PROMPT_TEMPLATE: ClassVar[str] = """
 You are {name}, a Werewolf.
 Your goal is to survive and eliminate the Villagers without being caught.
 You must blend in and pretend to be a Villager.
@@ -33,7 +33,7 @@ Each round, you will:
 Be careful not to reveal your true role.
 """
 
-    SEER_PROMPT_TEMPLATE = """
+    SEER_PROMPT_TEMPLATE: ClassVar[str] = """
 You are {name}, the Seer.
 Each night, you secretly learn the role of one player.
 You must help the Villagers without revealing your power too obviously.
@@ -43,7 +43,7 @@ Each round, you will:
 Be strategic in how you share your insights.
 """
 
-    DOCTOR_PROMPT_TEMPLATE = """
+    DOCTOR_PROMPT_TEMPLATE: ClassVar[str] = """
 You are {name}, the Doctor.
 Each night, you may save one player from elimination.
 Your goal is to protect the villagers and keep them alive.
