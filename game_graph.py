@@ -187,7 +187,7 @@ def eliminate_node(state: GameState, config: RunnableConfig) -> GameState:
         raise ValueError("No werewolves left to eliminate.")
 
     acting_wolf = random.choice(alive_wolves)
-    eliminated, log = player_objects[acting_wolf].eliminate()
+    eliminated, log = player_objects[acting_wolf].eliminate(state.alive_players)
 
     if not eliminated:
         raise ValueError(f"{acting_wolf} failed to return a target.")
@@ -201,9 +201,12 @@ def eliminate_node(state: GameState, config: RunnableConfig) -> GameState:
             f"During the night, we decided to eliminate {eliminated}."
         )
 
+    # Convert log to string if it's a dict
+    log_str = str(log) if isinstance(log, dict) else log
+    
     state = state.model_copy(update={
         "eliminated": eliminated,
-        "eliminate_log": log,
+        "eliminate_log": log_str,
         "phase": "protect"
     })
     state = log_event(state, "eliminate", acting_wolf, {
@@ -222,16 +225,19 @@ def protect_node(state: GameState, config: RunnableConfig) -> GameState:
     if doctor_name not in state.alive_players:
         return state.model_copy(update={"phase": "unmask"})
 
-    protect_target, log = player_objects[doctor_name].save()
+    protect_target, log = player_objects[doctor_name].save(state.alive_players)
 
     if not protect_target:
         raise ValueError(f"{doctor_name} failed to specify a protection target.")
 
     tqdm.tqdm.write(f"{doctor_name} protected {protect_target}")
 
+    # Convert log to string if it's a dict
+    log_str = str(log) if isinstance(log, dict) else log
+    
     state =  state.model_copy(update={
         "protected": protect_target,
-        "protect_log": log,
+        "protect_log": log_str,
         "phase": "unmask"
     })
 
@@ -251,7 +257,7 @@ def unmask_node(state: GameState, config: RunnableConfig) -> GameState:
     if seer_name not in state.alive_players:
         return state.model_copy(update={"phase": "resolve_night"})
 
-    target, log = player_objects[seer_name].unmask()
+    target, log = player_objects[seer_name].unmask(state.alive_players)
     if not target:
         raise ValueError(f"{seer_name} failed to return a target.")
 
@@ -259,9 +265,12 @@ def unmask_node(state: GameState, config: RunnableConfig) -> GameState:
     role_revealed = state.roles[target]
     player_objects[seer_name].reveal_and_update(target, role_revealed)
 
+    # Convert log to string if it's a dict
+    log_str = str(log) if isinstance(log, dict) else log
+    
     state =  state.model_copy(update={
         "unmasked": target,
-        "unmask_log": log,
+        "unmask_log": log_str,
         "phase": "resolve_night"
     })
 
@@ -273,7 +282,7 @@ def unmask_node(state: GameState, config: RunnableConfig) -> GameState:
     
     return state
     
-def night_node(state: GameState, _: RunnableConfig) -> GameState:
+def night_node(state: GameState, config: RunnableConfig) -> GameState:
     """Apply elimination/protection outcome and broadcast announcement."""
     if state.eliminated and state.eliminated != state.protected:
         # death of victim
@@ -298,7 +307,7 @@ def night_node(state: GameState, _: RunnableConfig) -> GameState:
     
     return state
     
-def checkwinner_node(state: GameState, _: RunnableConfig) -> GameState:
+def checkwinner_node(state: GameState, config: RunnableConfig) -> GameState:
     """Return to day phase or finish game if a faction wins."""
     wolves_alive = [p for p in state.werewolves if p in state.alive_players]
     villagers_alive = [p for p in state.alive_players if p not in wolves_alive]
@@ -397,7 +406,7 @@ def vote_node(state: GameState, config: RunnableConfig) -> GameState:
     
     return state
     
-def exile_node(state: GameState, _: RunnableConfig) -> GameState:
+def exile_node(state: GameState, config: RunnableConfig) -> GameState:
     if not state.votes:
         raise ValueError("No votes found.")
 
@@ -431,7 +440,7 @@ def exile_node(state: GameState, _: RunnableConfig) -> GameState:
 
     return state
 
-def check_winner_day_node(state: GameState, _: RunnableConfig) -> GameState:
+def check_winner_day_node(state: GameState, config: RunnableConfig) -> GameState:
     wolves_alive = [p for p in state.werewolves if p in state.alive_players]
     villagers_alive = [p for p in state.alive_players if p not in wolves_alive]
 
@@ -477,7 +486,7 @@ def summary_node(state: GameState, config: RunnableConfig) -> GameState:
 
     return state
 
-def end_node(state: GameState, _: RunnableConfig) -> GameState:
+def end_node(state: GameState, config: RunnableConfig) -> GameState:
     print("\n--- GAME OVER ---")
     print(f"Winner: {state.winner}")
     print(f"\nFinal alive players: {state.alive_players}")
