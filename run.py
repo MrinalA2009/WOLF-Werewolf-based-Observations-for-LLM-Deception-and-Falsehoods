@@ -72,7 +72,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model", 
         default="google_genai:gemini-2.0-flash",
-        help="Model to use (default: "google_genai:gemini-2.0-flash"). Options: gemini-pro, gemini-1.5-pro, gemini-1.5-flash"
+        help="Model to use (default: google_genai:gemini-2.0-flash). Options: gemini-pro, gemini-1.5-pro, gemini-1.5-flash"
     )
     parser.add_argument(
         "--api-key",
