@@ -4,7 +4,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 import argparse
 
-def get_llm(model_name="google_genai:gemini-2.0-flash", api_key=None):
+def get_llm(model_name="gemini-1.5-flash", api_key=None):
     """Initialize the language model with configurable parameters."""
     if api_key:
         os.environ["GOOGLE_API_KEY"] = api_key
@@ -16,7 +16,7 @@ def get_llm(model_name="google_genai:gemini-2.0-flash", api_key=None):
         temperature=0.7
     )
 
-def run_werewolf_game(model_name="google_genai:gemini-2.0-flash", api_key=None):
+def run_werewolf_game(model_name="gemini-1.5-flash", api_key=None):
     """Run a werewolf game with the specified model."""
     print(f"🎮 Starting Werewolf Game with model: {model_name}")
     
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model", 
         default="google_genai:gemini-2.0-flash",
-        help="Model to use (default: google_genai:gemini-2.0-flash). Options: gemini-pro, gemini-1.5-pro, gemini-1.5-flash"
+        help="Model to use (default: gemini-1.5-flash). Options: gemini-pro, gemini-1.5-pro, gemini-1.5-flash"
     )
     parser.add_argument(
         "--api-key",
