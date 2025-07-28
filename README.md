@@ -39,34 +39,6 @@ export GOOGLE_API_KEY="your-api-key-here"
 python run.py
 ```
 
-## 🔧 Recent Fixes Applied
-
-### ✅ Fixed Issues
-
-1. **Bob's Target Selection Error** - The main issue was that the `eliminate()` method wasn't receiving the list of alive players to choose from
-   - **Fix**: Updated `eliminate()`, `save()`, and `unmask()` methods to accept `alive_players` parameter
-   - **Fix**: Modified game graph nodes to pass the current alive players list
-
-2. **JSON Parsing Errors** - LLM responses weren't being properly parsed when they didn't return valid JSON
-   - **Fix**: Enhanced error handling in `call_model()` method with fallback to `{"raw": response}`
-   - **Fix**: Added validation and default values for all JSON fields
-
-3. **Missing Context** - Players weren't getting enough information about the game state
-   - **Fix**: Enhanced prompts to include alive players list, game phase, and recent events
-   - **Fix**: Added better context about available targets and game rules
-
-4. **Model Name Issues** - Incorrect model name in Bidding.py
-   - **Fix**: Changed `gemini-2.0-flash` to `gemini-1.5-flash` in Bidding.py
-
-5. **Function Signature Mismatches** - LangGraph compatibility issues
-   - **Fix**: Updated all node functions to use `config: RunnableConfig` instead of `_: RunnableConfig`
-
-6. **Missing Methods** - `_add_observation()` method was missing from Player class
-   - **Fix**: Added the missing method to Player class
-
-7. **Type Validation Errors** - Log fields expecting strings but receiving dicts
-   - **Fix**: Added conversion of log dicts to strings before storing in GameState
-
 ### 🎮 Game Features
 
 - **Dynamic AI Players**: Each player has their own personality and strategy
