@@ -78,18 +78,3 @@ werewolf-game/
 
 1. **"Bob failed to return a target"** - This is a game logic issue in the player decision-making, not a setup problem. The AI model and infrastructure are working correctly.
 
-## 🎮 Next Steps
-
-1. **Test the game:** Try running with different models to see which works best
-2. **Customize players:** Edit the roles and player configurations in `config.py`
-3. **Debug game logic:** If needed, adjust the player decision-making logic in `player.py`
-4. **Add features:** Extend the game with additional roles or mechanics
-
-## 🆘 Troubleshooting
-
-If you encounter issues:
-
-1. **"Command not found"**: Make sure you're using `python run.py`, not `bash run.py`
-2. **"Module not found"**: Run `pip install -r requirements.txt` in the virtual environment
-3. **API errors**: Check your Google API key is valid and has Gemini access
-4. **Game logic errors**: These are design issues, not setup problems
