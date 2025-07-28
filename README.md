@@ -1,4 +1,4 @@
-# 🐺 AI Werewolf Game
+# Werewolf Game
 
 A fully functional AI-powered Werewolf game where AI players engage in strategic deception, investigation, and social deduction. The game features advanced deception detection, dynamic dialogue, and realistic player behavior.
 
