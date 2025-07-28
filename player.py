@@ -92,7 +92,7 @@ You must decide strategically who to save and reflect on your choice.
         except json.JSONDecodeError:
             return {"raw": resp}
 
-    def eliminate(self) -> (str, dict):
+    def eliminate(self) -> (str, dict): # type: ignore
         prompt = f"""
 You are {self.name} ({self.role}).
 It's night. Decide who to eliminate from alive players.
@@ -106,7 +106,7 @@ Respond in JSON with keys:
         self.scratchpad.append(result.get("analysis", ""))
         return target, result
 
-    def save(self) -> (str, dict):
+    def save(self) -> (str, dict): # type: ignore
         prompt = f"""
 You are {self.name} ({self.role}).
 It's night. Decide who to protect from elimination.
@@ -120,7 +120,7 @@ Respond in JSON with keys:
         self.scratchpad.append(result.get("analysis", ""))
         return target, result
 
-    def unmask(self) -> (str, dict):
+    def unmask(self) -> (str, dict): # type: ignore
         prompt = f"""
 You are {self.name} ({self.role}).
 It's night. Choose a player to investigate (learn their role).
@@ -138,7 +138,7 @@ Respond in JSON with keys:
         self.record_investigation(target)
         self.scratchpad.append(f"Discovered {target} is a {role}.")
 
-    def debate(self, dialogue_history: List[List[str]]) -> (str, dict):
+    def debate(self, dialogue_history: List[List[str]]) -> (str, dict): # type: ignore
         history = "\n".join([f"{s}: {t}" for s, t in dialogue_history])
         prompt = f"""
 You are {self.name} ({self.role}).
@@ -172,7 +172,7 @@ Respond in JSON with keys:
             return deception_scores[self.name][other_player]
         return 0.5  # Default neutral perception
 
-    def vote(self, deception_scores: Dict[str, Dict[str, float]] = None) -> (str, dict):
+    def vote(self, deception_scores: Dict[str, Dict[str, float]] = None) -> (str, dict): # type: ignore
         # Include deception perception in voting decision
         deception_info = ""
         if deception_scores and self.name in deception_scores:
@@ -199,7 +199,7 @@ Respond in JSON with keys:
         self.scratchpad.append(result.get("analysis", ""))
         return vote_choice, result
 
-    def summarize(self) -> (str, dict):
+    def summarize(self) -> (str, dict): # type: ignore
         prompt = f"""
 You are {self.name} ({self.role}).
 The game has ended. Summarize the outcome and your rationale.
