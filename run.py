@@ -24,11 +24,16 @@ def run_werewolf_game(model_name="gemini-1.5-flash", api_key=None):
     llm = get_llm(model_name, api_key)
     
     # Game setup
-    players = ["Alice", "Bob", "Charlie"]
+    players = ["Alice", "Bob", "Selena", "Raj", "Frank", "Joy", "Cyrus", "Emma"]
     roles = {
         "Alice": "Doctor",
         "Bob": "Werewolf", 
-        "Charlie": "Seer"
+        "Selena": "Seer", 
+        "Raj": "Villager", 
+        "Frank": "Villager", 
+        "Joy": "Werewolf", 
+        "Cyrus": "Villager", 
+        "Emma": "Villager"
     }
 
     seer = next((p for p in players if roles[p] == "Seer"), None)
