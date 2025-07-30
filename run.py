@@ -39,6 +39,7 @@ def run_werewolf_game(model_name="gemini-1.5-flash", api_key=None):
     seer = next((p for p in players if roles[p] == "Seer"), None)
     doctor = next((p for p in players if roles[p] == "Doctor"), None)
     werewolves = [p for p in players if roles[p] == "Werewolf"]
+    villagers = [p for p in players if roles[p] == "Villager"]
 
     player_objects = {
         name: Player(name=name, role=roles[name], llm=llm)
@@ -50,6 +51,7 @@ def run_werewolf_game(model_name="gemini-1.5-flash", api_key=None):
         players=players,
         alive_players=players.copy(),
         roles=roles,
+        villagers = villagers,
         werewolves=werewolves,
         seer=seer,
         doctor=doctor,

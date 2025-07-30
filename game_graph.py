@@ -30,6 +30,7 @@ class GameState(BaseModel):
     round_num: int = 0
     players: List[str] = []  # all players
     alive_players: List[str] = []  # updated after each night/day
+    villagers: List[str] = []
     werewolves: List[str] = []
     seer: Optional[str] = None
     doctor: Optional[str] = None
