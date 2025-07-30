@@ -1,6 +1,6 @@
 # Werewolf Game
 
-## 🎯 Game Overview
+## Game Overview
 
 This is a multiplayer social deduction game where:
 - **Villagers** try to identify and eliminate the Werewolves
@@ -10,7 +10,7 @@ This is a multiplayer social deduction game where:
 
 The game includes sophisticated deception detection that analyzes player statements and voting patterns to determine trustworthiness.
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Python 3.8+
@@ -37,7 +37,7 @@ export GOOGLE_API_KEY="your-api-key-here"
 python run.py
 ```
 
-### 🎮 Game Features
+### Game Features
 
 - **Dynamic AI Players**: Each player has their own personality and strategy
 - **Advanced Deception Detection**: Real-time analysis of player statements for deception
@@ -46,7 +46,7 @@ python run.py
 - **Voting System**: Democratic exile voting with deception analysis
 - **Game State Tracking**: Comprehensive logging of all game events
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ai-werewolf-game/
@@ -60,7 +60,7 @@ ai-werewolf-game/
 └── README.md            # This file
 ```
 
-## 🎲 How to Play
+## How to Play
 
 ### Game Flow
 
@@ -91,7 +91,7 @@ The game includes a sophisticated deception detection system that:
 - **Historical Tracking**: Maintains deception history for each player
 - **Confidence Scoring**: Provides confidence levels for deception assessments
 
-## ⚙️ Configuration
+## Configuration
 
 Edit `config.py` to customize:
 - Number of players
@@ -99,7 +99,7 @@ Edit `config.py` to customize:
 - Game parameters
 - Debug settings
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -123,14 +123,14 @@ Enable debug mode in `config.py`:
 "debug_mode": True
 ```
 
-## 📊 Game Logs
+## Game Logs
 
 The game generates comprehensive logs:
 - `game_log.json`: Complete game state history
 - Console output: Real-time game events
 - Deception analysis: Detailed deception assessments
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -138,11 +138,11 @@ The game generates comprehensive logs:
 4. Test thoroughly
 5. Submit a pull request
 
-## 📝 License
+## License
 
 This project is open source. See LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with LangChain and LangGraph
 - Powered by Google Gemini AI
