@@ -18,7 +18,7 @@ def get_llm(model_name="gemini-1.5-flash", api_key=None):
 
 def run_werewolf_game(model_name="gemini-1.5-flash", api_key=None):
     """Run a werewolf game with the specified model."""
-    print(f"🎮 Starting Werewolf Game with model: {model_name}")
+    print(f"Starting Werewolf Game with model: {model_name}")
     
     # Initialize the language model
     llm = get_llm(model_name, api_key)
@@ -62,7 +62,7 @@ def run_werewolf_game(model_name="gemini-1.5-flash", api_key=None):
     )
 
     # Run the game
-    print("🚀 Compiling and running the game graph...")
+    print("Compiling and running the game graph...")
     runnable = graph.compile()
     final_state = runnable.invoke(initial_state, config={
         "configurable": {
@@ -71,7 +71,7 @@ def run_werewolf_game(model_name="gemini-1.5-flash", api_key=None):
         }
     })
     
-    print("✅ Game completed successfully!")
+    print("Game completed successfully!")
     return final_state
 
 if __name__ == "__main__":
@@ -93,18 +93,18 @@ if __name__ == "__main__":
         if not args.api_key and not os.environ.get("GOOGLE_API_KEY"):
             # Temporarily use the key from your original file for testing
             args.api_key = "AIzaSyAO_DPLwLl0RQF1h0EPm9yBgSJnicriA8k"
-            print("⚠️  Using embedded API key for testing. Please set GOOGLE_API_KEY environment variable for production use.")
+            print("Using embedded API key for testing. Please set GOOGLE_API_KEY environment variable for production use.")
         
         final_state = run_werewolf_game(args.model, args.api_key)
         
-        print("\n🎯 Game Results:")
+        print("\n Game Results:")
         print(f"Final alive players: {final_state.alive_players}")
         if hasattr(final_state, 'winner'):
             print(f"Winner: {final_state.winner}")
         
     except Exception as e:
-        print(f"❌ Error running game: {e}")
-        print("\n💡 Troubleshooting:")
+        print(f" Error running game: {e}")
+        print("\n Troubleshooting:")
         print("1. Make sure your Google API key is valid")
         print("2. Check that all dependencies are installed: pip install -r requirements.txt")
         print("3. Try running with a different model: python run.py --model gemini-pro")
