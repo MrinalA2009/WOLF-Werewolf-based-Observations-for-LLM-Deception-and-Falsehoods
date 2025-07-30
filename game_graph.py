@@ -17,13 +17,11 @@
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Literal
 from langchain_core.runnables import RunnableConfig
-import random
-import tqdm
+import random, tqdm, json, os
 from langgraph.graph import StateGraph, END
 from collections import Counter
 from Bidding import get_bid, choose_next_speaker
 from concurrent.futures import ThreadPoolExecutor
-import json
 from logs import log_event
 from deception_detection import DeceptionDetector, update_deception_history
 from datetime import datetime
@@ -517,6 +515,7 @@ def end_node(state: GameState, config: RunnableConfig) -> GameState:
         json.dump(state.game_logs, f, indent=2)
 
     print("\nFull game log saved to game_log.json")
+    print("Saved at:", os.path.abspath("game_log.json"))
     return state
 
 #game state LangChain graph
