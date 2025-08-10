@@ -70,6 +70,7 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None):
     print("Compiling and running the game graph...")
     runnable = graph.compile()
     final_state = runnable.invoke(initial_state, config={
+        "recursion_limit": 1000,
         "configurable": {
             "player_objects": player_objects,
             "MAX_DEBATE_TURNS": 6
