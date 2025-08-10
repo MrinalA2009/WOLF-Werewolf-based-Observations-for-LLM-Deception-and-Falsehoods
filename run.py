@@ -6,10 +6,9 @@ import argparse
 from dotenv import load_dotenv
 
 load_dotenv()
-print("Loaded key:", os.getenv("OPENAI_API_KEY"))
 
 api_key = os.getenv("OPENAI_API_KEY")
-print(api_key)
+
 
 def get_llm(model_name="gpt-4o", api_key=None):
     """Initialize the language model with configurable parameters."""
@@ -22,6 +21,7 @@ def get_llm(model_name="gpt-4o", api_key=None):
         model=model_name,
         temperature=0.7
     )
+
 
 def run_werewolf_game(model_name="gpt-4o", api_key=None):
     """Run a werewolf game with the specified model."""
@@ -96,11 +96,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     try:
-        # If no API key provided via args, try to use the existing one from the file (temporarily)
-        if not args.api_key and not os.environ.get("OPENAI_API_KEY"):
-            # Temporarily use the key from your original file for testing
-            args.api_key = ""
-        
+        # If no API key provided via args, rely on environment variables loaded from .env
         final_state = run_werewolf_game(args.model, args.api_key)
         
         print("\n Game Results:")

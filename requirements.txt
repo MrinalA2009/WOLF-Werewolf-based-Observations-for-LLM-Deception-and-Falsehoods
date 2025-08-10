@@ -2,6 +2,7 @@ langchain
 langgraph
 langchain-core
 langchain_openai
-dotenv
+langchain-google-genai
+python-dotenv
 tqdm
 pydantic
