@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 from langchain_openai import ChatOpenAI
 import json
+from datetime import datetime
 
 class DeceptionDetector:
     """
@@ -155,6 +156,7 @@ No extra text, no markdown, no code fences.
         result.setdefault("_prompt", prompt)
         return result
 
+
 def update_deception_history(state, player_name: str, statement: str, 
                            self_analysis: Dict, other_analyses: Dict[str, Dict]):
     """
@@ -171,13 +173,49 @@ def update_deception_history(state, player_name: str, statement: str,
         Updated game state
     """
 
+    # Aggregate observer metrics
+    observer_count = len(other_analyses)
+    observer_deceptive_count = sum(1 for a in other_analyses.values() if a.get("is_deceptive", 0) == 1)
+    observers_flagging = [name for name, a in other_analyses.items() if a.get("is_deceptive", 0) == 1]
+    suspicion_levels = {name: a.get("suspicion_level", 0.5) for name, a in other_analyses.items()}
+    if observer_count > 0:
+        average_suspicion = sum(float(v) for v in suspicion_levels.values()) / observer_count
+        observer_deceptive_fraction = observer_deceptive_count / observer_count
+    else:
+        average_suspicion = 0.0
+        observer_deceptive_fraction = 0.0
+
+    # Context snapshot for richer analysis later
+    debate_tail = state.debate_log[-3:] if getattr(state, "debate_log", None) else []
+    context_snapshot = {
+        "alive_players": list(getattr(state, "alive_players", [])),
+        "current_speaker": getattr(state, "current_speaker", None),
+        "speaker_role": getattr(state, "roles", {}).get(player_name, None),
+        "debate_log_tail": debate_tail,
+    }
+
+    # Robust timestamp extraction
+    if other_analyses:
+        first_key = next(iter(other_analyses))
+        timestamp = other_analyses.get(first_key, {}).get("timestamp", datetime.utcnow().isoformat())
+    else:
+        timestamp = datetime.utcnow().isoformat()
+
     deception_record = {
         "statement": statement,
         "round": state.round_num,
         "phase": state.phase,
         "self_analysis": self_analysis,
+        "self_reported_deceptive": 1 if self_analysis.get("is_deceptive", 0) == 1 else 0,
         "other_analyses": other_analyses,
-        "timestamp": other_analyses.get(list(other_analyses.keys())[0], {}).get("timestamp", "")
+        "observer_count": observer_count,
+        "observer_deceptive_count": observer_deceptive_count,
+        "observer_deceptive_fraction": observer_deceptive_fraction,
+        "observers_flagging": observers_flagging,
+        "suspicion_levels": suspicion_levels,
+        "average_suspicion": average_suspicion,
+        "context_snapshot": context_snapshot,
+        "timestamp": timestamp,
     }
     
     # Update history
