@@ -17,7 +17,7 @@ fi
 
 # Check if Python dependencies are installed
 echo "Checking dependencies..."
-if ! python -c "import langchain_google_genai" &> /dev/null; then
+if ! python -c "import langchain_openai" &> /dev/null; then
     echo "Installing missing dependencies..."
     pip install -r requirements.txt
 fi
