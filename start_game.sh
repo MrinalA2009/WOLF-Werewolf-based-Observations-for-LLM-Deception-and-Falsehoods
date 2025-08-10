@@ -37,6 +37,6 @@ else
     echo ""
     echo "Usage examples:"
     echo "  ./start_game.sh --api-key YOUR_API_KEY_HERE"
-    echo "  export GOOGLE_API_KEY='your_key' && ./start_game.sh"
+    echo "  export OPENAI_API_KEY='your_key' && ./start_game.sh"
     exit 1
 fi
