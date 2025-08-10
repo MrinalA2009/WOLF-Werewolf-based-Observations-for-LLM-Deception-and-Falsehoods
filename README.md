@@ -12,6 +12,8 @@ The game includes sophisticated deception detection that analyzes player stateme
 
 ##  Quick Start
 
+See also: `LOGGING.md` and `METHODOLOGY.md` for detailed logging and methodology docs.
+
 ### Prerequisites
 - Python 3.8+
 - Google Gemini API key
@@ -125,8 +127,9 @@ Enable debug mode in `config.py`:
 
 ## Game Logs
 
-The game generates comprehensive logs:
-- `game_log.json`: Complete game state history
+The game generates comprehensive logs. See `LOGGING.md` for full details.
+- Events (NDJSON): One JSON event per line streamed during the run
+- Final State JSON: Complete final game state with `game_logs`
 - Console output: Real-time game events
 - Deception analysis: Detailed deception assessments
 

@@ -45,9 +45,9 @@ Respond in this exact JSON format:
 }}
 """
         
-        response = self.llm.invoke(prompt, max_tokens=300, timeout=10).content.strip()        
+        raw_text = self.llm.invoke(prompt, max_tokens=300, timeout=10).content.strip()        
         try:
-            result = json.loads(response)
+            result = json.loads(raw_text)
             # required fields and validate types
             result.setdefault("chain_of_thought", "")
             result.setdefault("is_deceptive", 0)
@@ -58,18 +58,19 @@ Respond in this exact JSON format:
             # Validate and normalize values
             result["is_deceptive"] = 1 if result["is_deceptive"] else 0
             result["confidence"] = max(0.0, min(1.0, float(result["confidence"])))
-            
-            return result
         except (json.JSONDecodeError, ValueError, KeyError) as e:
             # Fallback 
-            return {
-                "chain_of_thought": f"Failed to parse response: {response}",
+            result = {
+                "chain_of_thought": f"Failed to parse response: {raw_text}",
                 "is_deceptive": 0,
                 "confidence": 0.0,
                 "deception_type": "none",
                 "reasoning": f"JSON parsing error: {str(e)}",
-                "raw_response": response
             }
+        # Always include raw response and prompt for logging
+        result.setdefault("_raw_response", raw_text)
+        result.setdefault("_prompt", prompt)
+        return result
     
     def analyze_other_deception(self, observer_name: str, speaker_name: str, statement: str, 
                               context: str = "", history: List[Dict] = None) -> Dict:
@@ -119,9 +120,9 @@ Respond in this exact JSON format:
 }}
 """
         
-        response = self.llm.invoke(prompt, max_tokens=300, timeout=10).content.strip()        
+        raw_text = self.llm.invoke(prompt, max_tokens=300, timeout=10).content.strip()        
         try:
-            result = json.loads(response)
+            result = json.loads(raw_text)
             # required fields and validate types
             result.setdefault("chain_of_thought", "")
             result.setdefault("is_deceptive", 0)
@@ -134,19 +135,21 @@ Respond in this exact JSON format:
             result["is_deceptive"] = 1 if result["is_deceptive"] else 0
             result["confidence"] = max(0.0, min(1.0, float(result["confidence"])))
             result["suspicion_level"] = max(0.0, min(1.0, float(result["suspicion_level"])))
-            
-            return result
         except (json.JSONDecodeError, ValueError, KeyError) as e:
             # Fallback 
-            return {
-                "chain_of_thought": f"Failed to parse response: {response}",
+            result = {
+                "chain_of_thought": f"Failed to parse response: {raw_text}",
                 "is_deceptive": 0,
                 "confidence": 0.0,
                 "deception_type": "none",
                 "reasoning": f"JSON parsing error: {str(e)}",
                 "suspicion_level": 0.5,
-                "raw_response": response
             }
+        # Always include raw response and prompt for logging
+        result.setdefault("_raw_response", raw_text)
+        result.setdefault("_prompt", prompt)
+        return result
+
 
 def update_deception_history(state, player_name: str, statement: str, 
                            self_analysis: Dict, other_analyses: Dict[str, Dict]):
