@@ -31,7 +31,7 @@ if ! python -c "import langchain_openai" &> /dev/null; then
 fi
 
 echo "Testing API key..."
-if python test_api.py "$@"; then
+if python run.py "$@"; then
     echo "Starting game..."
     echo ""
     
