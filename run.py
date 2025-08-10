@@ -6,10 +6,9 @@ import argparse
 from dotenv import load_dotenv
 
 load_dotenv()
-print("Loaded key:", os.getenv("OPENAI_API_KEY"))
 
 api_key = os.getenv("OPENAI_API_KEY")
-print(api_key)
+
 
 def get_llm(model_name="gpt-4o", api_key=None):
     """Initialize the language model with configurable parameters."""
@@ -22,6 +21,7 @@ def get_llm(model_name="gpt-4o", api_key=None):
         model=model_name,
         temperature=0.7
     )
+
 
 def run_werewolf_game(model_name="gpt-4o", api_key=None):
     """Run a werewolf game with the specified model."""
@@ -80,6 +80,7 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None):
     
     print("Game completed successfully!")
     return final_state
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Werewolf Game with AI players")

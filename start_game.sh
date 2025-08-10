@@ -7,8 +7,13 @@ echo "============================"
 # Load environment variables from .env if present
 if [ -f ".env" ]; then
     echo "Loading environment from .env"
+    # Only export lines that look like KEY=VALUE (ignore bare tokens)
     set -a
-    source .env
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+            export "$line"
+        fi
+    done < .env
     set +a
 fi
 
