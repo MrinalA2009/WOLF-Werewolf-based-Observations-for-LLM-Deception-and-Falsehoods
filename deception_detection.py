@@ -45,8 +45,7 @@ Respond in this exact JSON format:
 }}
 """
         
-        response = self.llm.invoke(prompt, max_output_tokens=300, timeout=10).content.strip()
-        
+        response = self.llm.invoke(prompt, max_tokens=300, timeout=10).content.strip()        
         try:
             result = json.loads(response)
             # required fields and validate types
@@ -120,8 +119,7 @@ Respond in this exact JSON format:
 }}
 """
         
-        response = self.llm.invoke(prompt, max_output_tokens=300, timeout=10).content.strip()
-        
+        response = self.llm.invoke(prompt, max_tokens=300, timeout=10).content.strip()        
         try:
             result = json.loads(response)
             # required fields and validate types
