@@ -4,7 +4,7 @@ This project streams all game events to disk and writes a final full-state JSON 
 
 - Events (NDJSON): `logs/<run_id>/events.ndjson`
   - One JSON object per line, in chronological order
-  - Contains: timestamp, round, step, phase, event type, actor, and `details`
+  - Contains: timestamp, round_number, step_number, phase, event_type, actor, and `details`
   - `details` may include raw model prompts and responses under `_prompt` and `_raw_response`
 - Final State JSON: `logs/<run_id>/game_state.json`
   - Full Pydantic-serialized `GameState` including `game_logs`, deception history, scores, etc.

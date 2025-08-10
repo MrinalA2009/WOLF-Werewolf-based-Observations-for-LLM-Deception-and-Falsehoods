@@ -491,38 +491,8 @@ def summary_node(state: GameState, config: RunnableConfig) -> GameState:
     return state
 
 def end_node(state: GameState, config: RunnableConfig) -> GameState:
-    print("\n--- GAME OVER ---")
     print(f"Winner: {state.winner}")
-    print(f"\nFinal alive players: {state.alive_players}")
-    print(f"Eliminated: {state.eliminated}")
-    print(f"Exiled: {state.exiled}")
-    print("\nDebate Log:")
-    for turn in state.debate_log:
-        print(f"{turn[0]}: {turn[1]}")
-  
-    # Print deception analysis summary
-    deception_summary = generate_deception_summary(state)
-    print(f"\n--- DECEPTION ANALYSIS SUMMARY ---")
-    print(f"Total statements analyzed: {deception_summary['total_statements_analyzed']}")
-    
-    for player, stats in deception_summary['deception_by_player'].items():
-        print(f"\n{player} ({state.roles.get(player, 'Unknown')}):")
-        print(f"  - Statements made: {stats['total_statements']}")
-        print(f"  - Self-reported deceptions: {stats['self_reported_deceptions']}")
-        print(f"  - Peer-detected deceptions: {stats['peer_detected_deceptions']}")
-        print(f"  - Average suspicion level: {stats['average_suspicion']:.2f}")
-    
-    print(f"\nFinal deception scores (how each player perceives others):")
-    for observer, scores in state.deception_scores.items():
-        print(f"{observer}: {', '.join([f'{target}={score:.2f}' for target, score in scores.items()])}")
-
-    # Print where logs were saved (if enabled)
-    paths = getattr(state, "log_paths", {})
-    if paths:
-        print("\nFull logs saved to:")
-        print(f"  Events (NDJSON): {paths.get('events')}")
-        print(f"  Final State JSON: {paths.get('state')}")
-        print(f"  Run Metadata: {paths.get('meta')}")
+    print("Game end")
     return state
 
 #game state LangChain graph

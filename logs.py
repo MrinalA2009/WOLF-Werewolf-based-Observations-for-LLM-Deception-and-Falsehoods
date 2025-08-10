@@ -103,10 +103,10 @@ def log_event(state, event_type: str, actor: Optional[str], content: Dict):
     """
     entry = {
         "timestamp": datetime.utcnow().isoformat(),
-        "round": state.round_num,
-        "step": state.step,
+        "round_number": state.round_num,
+        "step_number": state.step,
         "phase": state.phase,
-        "event": event_type,
+        "event_type": event_type,
         "actor": actor,
         "details": content,
     }

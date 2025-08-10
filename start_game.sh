@@ -34,21 +34,8 @@ if ! python -c "import langchain_openai" &> /dev/null; then
     pip install -r requirements.txt
 fi
 
-echo "Testing API key..."
-if python run.py "$@"; then
-    echo "Starting game..."
-    echo ""
-    
-    # Run the game with any arguments passed to this script
-    python run.py "$@"
-    
-    echo ""
-    echo "Game session ended."
-else
-    echo "API test failed. Please check your API key and try again."
-    echo ""
-    echo "Usage examples:"
-    echo "  ./start_game.sh --api-key YOUR_API_KEY_HERE"
-    echo "  export OPENAI_API_KEY='your_key' && ./start_game.sh"
-    exit 1
-fi
+echo "Starting game..."
+echo ""
+python run.py "$@"
+echo ""
+echo "Game session ended."

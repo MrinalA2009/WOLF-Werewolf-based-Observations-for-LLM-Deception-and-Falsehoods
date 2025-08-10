@@ -86,16 +86,7 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs"
     
     # Persist the final state to disk if logging is enabled
     write_final_state(final_state)
-
-    print("Game completed successfully!")
-
-    # Print helpful info for locating logs
-    paths = getattr(final_state, "log_paths", {})
-    if paths:
-        print("\n Log files:")
-        print(f"  Events (NDJSON): {paths.get('events')}")
-        print(f"  Final State JSON: {paths.get('state')}")
-        print(f"  Run Metadata: {paths.get('meta')}")
+ 
     return final_state
 
 
@@ -126,12 +117,7 @@ if __name__ == "__main__":
     try:
         # If no API key provided via args, rely on environment variables loaded from .env
         final_state = run_werewolf_game(args.model, args.api_key, log_dir=args.log_dir, enable_file_logging=(not args.no_file_logging))
-        
-        print("\n Game Results:")
-        print(f"Final alive players: {final_state.alive_players}")
-        if hasattr(final_state, 'winner'):
-            print(f"Winner: {final_state.winner}")
-        
+         
     except Exception as e:
         print(f" Error running game: {e}")
         print("\n Troubleshooting:")
