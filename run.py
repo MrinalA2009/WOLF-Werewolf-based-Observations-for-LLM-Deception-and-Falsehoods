@@ -22,7 +22,7 @@ def get_llm(model_name="gpt-4o", api_key=None):
         temperature=0.7
     )
 
-def run_werewolf_game(model_name="gemini-1.5-flash", api_key=None):
+def run_werewolf_game(model_name="gpt-4o", api_key=None):
     """Run a werewolf game with the specified model."""
     print(f"Starting Werewolf Game with model: {model_name}")
     
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     
     try:
         # If no API key provided via args, try to use the existing one from the file (temporarily)
-        if not args.api_key and not os.environ.get("GOOGLE_API_KEY"):
+        if not args.api_key and not os.environ.get("OPENAI_API_KEY"):
             # Temporarily use the key from your original file for testing
             args.api_key = ""
         
@@ -110,6 +110,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f" Error running game: {e}")
         print("\n Troubleshooting:")
-        print("1. Make sure your Google API key is valid")
+        print("1. Make sure your OPENAI API key is valid")
         print("2. Check that all dependencies are installed: pip install -r requirements.txt")
         print("3. Try running with a different model: python run.py --model gemini-pro")
