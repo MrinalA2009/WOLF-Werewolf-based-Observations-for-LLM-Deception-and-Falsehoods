@@ -1,13 +1,14 @@
 import random
 from langchain_openai import ChatOpenAI
-
+import os
 # ChatGpt model setup - initialize lazily
 _llm = None
 
 def get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
+        model_name = os.environ.get("MODEL_NAME", "gpt-4o")
+        _llm = ChatOpenAI(model=model_name, temperature=0.7)
     return _llm
 
 def get_bid(player_name: str, dialogue_history: str):
@@ -18,7 +19,7 @@ def get_bid(player_name: str, dialogue_history: str):
         (int, str): (numeric bid value, raw model output)
     """
     prompt = f"""
-You are a player in a game of Werewolf. Your name is {player_name}.
+You are a player in a competitive game of Werewolf. Your name is {player_name}.
 Here is the current conversation between players:
 
 {dialogue_history}

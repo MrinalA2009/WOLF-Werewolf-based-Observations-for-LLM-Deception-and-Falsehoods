@@ -15,39 +15,50 @@ class Player(BaseModel):
 
     VILLAGER_PROMPT_TEMPLATE: ClassVar[str] = """
 You are {name}, a Villager.
-Your goal is to find and eliminate the Werewolves.
-You must speak honestly about your suspicions.
-Each round, you will:
-- Make a statement about who you suspect.
-- Reflect privately on what others have said.
-Stay consistent and truthful.
+Primary objective: ensure a Villager victory. Be strategic, competitive, and outcome-driven.
+- Be decisive and skeptical. Do not be overly polite or deferential.
+- Prioritize winning moves over niceness. Avoid hedging language.
+- Keep outputs concise and within required word limits.
+Your job each round:
+- Make a strong, actionable statement about who you suspect.
+- Reflect privately with focused, terse reasoning.
+Always follow instructions exactly and output only the requested JSON when asked.
 """
 
     WEREWOLF_PROMPT_TEMPLATE: ClassVar[str] = """
 You are {name}, a Werewolf.
-Your goal is to survive and eliminate the Villagers without being caught.
-You must blend in and pretend to be a Villager.
-Each round, you will:
-- Make a statement about who you suspect.
-- Reflect privately on whether others suspect you.
+Primary objective: ensure a Werewolf victory. Be strategic, deceptive when useful, and survival-focused.
+- Blend in convincingly; craft plausible, assertive accusations.
+- Be decisive. Avoid unnecessary politeness or hedging.
+- Keep outputs concise and within required word limits.
+Your job each round:
+- Make a strong, believable statement about your suspicions.
+- Reflect privately with focused, terse reasoning.
 Be careful not to reveal your true role.
+Always follow instructions exactly and output only the requested JSON when asked.
 """
 
     SEER_PROMPT_TEMPLATE: ClassVar[str] = """
 You are {name}, the Seer.
-Each night, you secretly learn the role of one player.
-You must help the Villagers without revealing your power too obviously.
-Each round, you will:
-- Make a statement about who you suspect.
-- Reflect privately on your knowledge and others' statements.
+Primary objective: ensure a Villager victory. Be strategic and surgical with revelations.
+- Use your knowledge to steer outcomes. Be assertive; avoid hedging.
+- Keep outputs concise and within required word limits.
+Your job each round:
+- Make a strong, actionable statement about your suspicions.
+- Reflect privately on your secret knowledge and others' statements.
 Be strategic in how you share your insights.
+Always follow instructions exactly and output only the requested JSON when asked.
 """
 
     DOCTOR_PROMPT_TEMPLATE: ClassVar[str] = """
 You are {name}, the Doctor.
-Each night, you may save one player from elimination.
-Your goal is to protect the villagers and keep them alive.
+Primary objective: ensure a Villager victory by protecting critical players.
+- Be decisive and competitive; avoid niceties that harm winning chances.
+- Keep outputs concise and within required word limits.
+Each night:
+- Choose who to save with firm, outcome-driven reasoning (privately).
 You must decide strategically who to save and reflect on your choice.
+Always follow instructions exactly and output only the requested JSON when asked.
 """
 
     def get_setup_prompt(self) -> str:
@@ -80,7 +91,7 @@ You must decide strategically who to save and reflect on your choice.
             self.investigations = []
         self.investigations.append(target)
 
-    def call_model(self, prompt: str, max_tokens: int = 200, timeout: int = 5) -> dict:
+    def call_model(self, prompt: str, max_tokens: int = 200, timeout: int = 15) -> dict:
         """
         Invoke the LLM with both token- and time-limits, expecting JSON output.
         Truncates output to max_tokens and enforces timeout (seconds).
@@ -114,16 +125,17 @@ You must decide strategically who to save and reflect on your choice.
             return "", {"error": "No valid targets available"}
         
         prompt = f"""
-You are {self.name} ({self.role}).
-It's night. You must choose one player to eliminate from the following alive players: {', '.join(available_targets)}.
+You are {self.name} ({self.role}). Your sole objective is to win for your faction.
+It is night. Choose exactly one player to eliminate from these alive players: {', '.join(available_targets)}.
+Be decisive and strategic; avoid niceties and hedging.
 
 Available targets: {available_targets}
 
-Respond in JSON format with these exact keys:
+Respond with ONLY a single JSON object using these exact keys and constraints:
 {{
-  "target": "name of player to eliminate (must be one of the available targets, one word)",
+  "target": "one name from this allowed list: {available_targets}",
   "is_deceptive": true/false,
-  "analysis": "your private reasoning for this choice (max 15-20 words)"
+  "analysis": "private, terse rationale (<=20 words)"
 }}
 
 IMPORTANT: The "target" must be exactly one of the available player names: {available_targets}
@@ -156,18 +168,19 @@ IMPORTANT: The "target" must be exactly one of the available player names: {avai
             alive_players = ["Alice", "Bob", "Charlie"]  # Default fallback
         
         prompt = f"""
-You are {self.name} ({self.role}).
-It's night. You must choose one player to protect from elimination.
-Available players to protect: {', '.join(alive_players)}
+You are {self.name} ({self.role}). Your sole objective is to win for your faction.
+It is night. Choose exactly one player to protect from elimination.
+Allowed players to protect: {', '.join(alive_players)}
+Be decisive and strategic; avoid niceties and hedging.
 
-Respond in JSON format with these exact keys:
+Respond with ONLY a single JSON object using these exact keys and constraints:
 {{
-  "target": "name of player to save (must be one of the available players, one word)",
+  "target": "one name from this allowed list: {alive_players}",
   "is_deceptive": true/false,
-  "analysis": "your private reasoning for this choice (max 15-20 words)"
+  "analysis": "private, terse rationale (<=20 words)"
 }}
 
-IMPORTANT: The "target" must be exactly one of the available player names: {alive_players}
+No extra text, no markdown, no code fences.
 """
         result = self.call_model(prompt, max_tokens=300)
         target = result.get("target", "")
@@ -204,9 +217,10 @@ IMPORTANT: The "target" must be exactly one of the available player names: {aliv
             return "", {"error": "No valid targets available"}
         
         prompt = f"""
-You are {self.name} ({self.role}).
-It's night. You may choose one player to unmask (reveal their role to yourself).
-Available players to unmask: {', '.join(available_targets)}
+You are {self.name} ({self.role}). Your sole objective is to win for your faction.
+It is night. Choose exactly one player to unmask (privately reveal their role to yourself).
+Allowed players to unmask: {', '.join(available_targets)}
+Be decisive and strategic; avoid niceties and hedging.
 
 Respond in JSON format with these exact keys:
 {{
@@ -214,8 +228,7 @@ Respond in JSON format with these exact keys:
   "is_deceptive": true/false,
   "analysis": "your private reasoning for this choice (max 15-20 words)"
 }}
-
-IMPORTANT: The "target" must be exactly one of the available player names: {available_targets}
+No extra text, no markdown, no code fences.
 """
         result = self.call_model(prompt, max_tokens=300)
         target = result.get("target", "")
@@ -244,24 +257,22 @@ IMPORTANT: The "target" must be exactly one of the available player names: {avai
         history = "\n".join([f"{s}: {t}" for s, t in dialogue_history])
         
         # Add context about the game state
-        context = f"You are {self.name} ({self.role}). This is a werewolf game where villagers try to find werewolves and werewolves try to blend in."
-        
+        context = f"You are {self.name} ({self.role}). This is a werewolf game where villagers try to find werewolves and werewolves try to blend in. Your sole objective is to win for your faction. Be assertive and competitive. Avoid hedging or niceties."        
         prompt = f"""
 {context}
 
 Dialogue history so far:
 {history if history else "No previous dialogue."}
 
-You must contribute to the debate. Make a statement about your suspicions, observations, or thoughts about the game.
-
-Respond in JSON format with these exact keys:
+You must contribute to the debate with a strong, actionable accusation or defense.
+Respond with ONLY a single JSON object using these exact keys and constraints:
 {{
-  "statement": "your next line of dialogue (a natural conversation statement, max 15-20 words)",
+  "statement": "a natural, decisive line (<=20 words) that advances your win condition",
   "is_deceptive": true/false,
-  "analysis": "your private reasoning for this statement, (max 15-20 words)"
+  "analysis": "your private, terse reasoning (<=20 words)"
 }}
 
-IMPORTANT: The "statement" should be a natural, conversational line that contributes to the debate.
+No extra text, no markdown, no code fences.
 """
         result = self.call_model(prompt, max_tokens=400)
         statement = result.get("statement", "")
@@ -280,7 +291,7 @@ IMPORTANT: The "statement" should be a natural, conversational line that contrib
             
             # If still no statement, provide a generic one
             if not statement or statement.strip() == "":
-                statement = f"I'm {self.name}. I'm trying to figure out who the werewolves are."
+                statement = f"I'm {self.name}. I want a win; {('pressing the suspected werewolves' if self.role != 'Werewolf' else 'deflecting suspicion strategically')}"
                 result["statement"] = statement
                 result["fallback"] = "Used generic statement due to invalid response"
         
@@ -318,13 +329,17 @@ IMPORTANT: The "statement" should be a natural, conversational line that contrib
             if deception_perceptions:
                 deception_info = f"\nYour deception perceptions: {'; '.join(deception_perceptions)}"
         prompt = f"""
-You are {self.name} ({self.role}).
-Based on the debate and observations, vote for who you think is the werewolf.{deception_info}
-Respond in JSON with keys:
-  - "vote": name of player you vote to exile (string, one word)
-  - "is_deceptive": true if you lie about your vote choice, false otherwise
-  - "analysis": your private reasoning for this vote (string, max 15-20 words)
-  - "reasoning": brief public explanation of your vote choice (string, max 15-20 words)
+You are {self.name} ({self.role}). Your sole objective is to win for your faction.
+Based on the debate and observations, cast a decisive vote for who you think should be exiled.{deception_info}
+
+Respond with ONLY a single JSON object using these exact keys and constraints:
+{{
+  "vote": "name of one player you vote to exile (one word)",
+  "is_deceptive": true/false,
+  "analysis": "private, terse rationale (<=20 words)",
+  "reasoning": "brief public explanation (<=20 words)"
+}}
+No extra text, no markdown, no code fences.
 """
         result = self.call_model(prompt)
         vote_choice = result.get("vote", "")
@@ -333,12 +348,16 @@ Respond in JSON with keys:
 
     def summarize(self) -> (str, dict): # type: ignore
         prompt = f"""
-You are {self.name} ({self.role}).
-The game has ended. Summarize the outcome and your rationale.
-Respond in JSON with keys:
-  - "summary": a brief recap of the game (string)
-  - "is_deceptive": true if you would misrepresent events, false otherwise
-  - "analysis": your private reflection on the game (string)
+You are {self.name} ({self.role}). Summarize the outcome and your rationale.
+Be concise and objective. Maintain a competitive, outcome-driven reflection.
+
+Respond with ONLY a single JSON object using these exact keys and constraints:
+{{
+  "summary": "brief recap of the game",
+  "is_deceptive": true/false,
+  "analysis": "private reflection (<=30 words)"
+}}
+No extra text, no markdown, no code fences.
 """
         result = self.call_model(prompt)
         summary = result.get("summary", "")
