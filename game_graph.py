@@ -70,6 +70,11 @@ class GameState(BaseModel):
     ] = "eliminate"
     step: int = 0 
 
+    # File logging configuration (optional)
+    log_dir: Optional[str] = None
+    log_run_id: Optional[str] = None
+    log_paths: Dict[str, str] = Field(default_factory=dict)
+
 def analyze_statement_deception(state: GameState, speaker_name: str, statement: str, 
                                player_objects: Dict, config: RunnableConfig) -> GameState:
     """
@@ -511,12 +516,13 @@ def end_node(state: GameState, config: RunnableConfig) -> GameState:
     for observer, scores in state.deception_scores.items():
         print(f"{observer}: {', '.join([f'{target}={score:.2f}' for target, score in scores.items()])}")
 
-    # Write logs to file
-    with open("game_log.json", "w") as f:
-        json.dump(state.game_logs, f, indent=2)
-
-    print("\nFull game log saved to game_log.json")
-    print("Saved at:", os.path.abspath("game_log.json"))
+    # Print where logs were saved (if enabled)
+    paths = getattr(state, "log_paths", {})
+    if paths:
+        print("\nFull logs saved to:")
+        print(f"  Events (NDJSON): {paths.get('events')}")
+        print(f"  Final State JSON: {paths.get('state')}")
+        print(f"  Run Metadata: {paths.get('meta')}")
     return state
 
 #game state LangChain graph
@@ -549,7 +555,3 @@ graph.add_conditional_edges("exile", lambda s: s.phase)
 graph.add_conditional_edges("check_winner_day", lambda s: s.phase)
 graph.add_conditional_edges("summarize", lambda s: s.phase)
 graph.add_edge("end", END)
-
-
-
-
