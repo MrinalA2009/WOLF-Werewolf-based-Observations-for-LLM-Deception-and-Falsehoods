@@ -4,6 +4,14 @@
 echo "Werewolf AI Game Launcher"
 echo "============================"
 
+# Load environment variables from .env if present
+if [ -f ".env" ]; then
+    echo "Loading environment from .env"
+    set -a
+    source .env
+    set +a
+fi
+
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
     echo "Virtual environment not found. Setting up..."

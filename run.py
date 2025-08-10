@@ -96,11 +96,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     try:
-        # If no API key provided via args, try to use the existing one from the file (temporarily)
-        if not args.api_key and not os.environ.get("OPENAI_API_KEY"):
-            # Temporarily use the key from your original file for testing
-            args.api_key = ""
-        
+        # If no API key provided via args, rely on environment variables loaded from .env
         final_state = run_werewolf_game(args.model, args.api_key)
         
         print("\n Game Results:")
