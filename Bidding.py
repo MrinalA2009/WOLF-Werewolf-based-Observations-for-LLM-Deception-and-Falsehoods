@@ -1,18 +1,18 @@
 import random
 from langchain_openai import ChatOpenAI
 
-# Gemini model setup - initialize lazily
+# ChatGpt model setup - initialize lazily
 _llm = None
 
 def get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatOpenAI(model="gemini-1.5-flash", temperature=0.7)
+        _llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
     return _llm
 
 def get_bid(player_name: str, dialogue_history: str):
     """
-    Calls Gemini to get a bid (0-10) from a player based on the debate so far.
+    Calls gpt to get a bid (0-10) from a player based on the debate so far.
 
     Returns:
         (int, str): (numeric bid value, raw model output)
