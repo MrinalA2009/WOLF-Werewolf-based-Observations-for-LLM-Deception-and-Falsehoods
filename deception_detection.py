@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 import json
 
 class DeceptionDetector:
@@ -7,7 +7,7 @@ class DeceptionDetector:
     Handles deception detection analysis for player statements using Chain of Thought reasoning.
     """
     
-    def __init__(self, llm: ChatGoogleGenerativeAI):
+    def __init__(self, llm: ChatOpenAI):
         self.llm = llm
     
     def analyze_self_deception(self, player_name: str, statement: str, context: str = "") -> Dict:

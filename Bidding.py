@@ -1,5 +1,5 @@
 import random
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
 # Gemini model setup - initialize lazily
 _llm = None
@@ -7,7 +7,7 @@ _llm = None
 def get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.7)
+        _llm = ChatOpenAI(model="gemini-1.5-flash", temperature=0.7)
     return _llm
 
 def get_bid(player_name: str, dialogue_history: str):
