@@ -19,6 +19,7 @@ Thumbs.db
 # Logs and local data
 werewolf_game_log.json
 *.log
+logs/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints
