@@ -8,7 +8,11 @@ echo "============================"
 if [ -f ".env" ]; then
     echo "Loading environment from .env"
     set -a
-    source .env
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+            export "$line"
+        fi
+    done < .env
     set +a
 fi
 

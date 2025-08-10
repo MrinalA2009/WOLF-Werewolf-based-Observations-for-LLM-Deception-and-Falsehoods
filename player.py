@@ -88,7 +88,7 @@ You must decide strategically who to save and reflect on your choice.
         """
         resp = self.llm.invoke(
             prompt,
-            max_output_tokens=max_tokens,
+            max_tokens=max_tokens, 
             timeout=timeout
         ).content.strip()
         try:
