@@ -84,17 +84,22 @@ You must decide strategically who to save and reflect on your choice.
         """
         Invoke the LLM with both token- and time-limits, expecting JSON output.
         Truncates output to max_tokens and enforces timeout (seconds).
-        Returns parsed JSON or a {"raw": ...} fallback.
+        Returns parsed JSON and always includes raw text and prompt for logging.
         """
-        resp = self.llm.invoke(
+        resp_text = self.llm.invoke(
             prompt,
             max_tokens=max_tokens, 
             timeout=timeout
         ).content.strip()
+        result: Dict = {}
         try:
-            return json.loads(resp)
+            result = json.loads(resp_text)
         except json.JSONDecodeError:
-            return {"raw": resp}
+            result = {"raw": resp_text}
+        # Always include raw response and prompt for logging
+        result.setdefault("_raw_response", resp_text)
+        result.setdefault("_prompt", prompt)
+        return result
 
     def eliminate(self, alive_players: List[str] = None) -> (str, dict): # type: ignore
         # If no alive_players provided, use a default list (this should be passed from game state)
@@ -200,12 +205,12 @@ IMPORTANT: The "target" must be exactly one of the available player names: {aliv
         
         prompt = f"""
 You are {self.name} ({self.role}).
-It's night. You must choose one player to investigate (learn their role).
-Available players to investigate: {', '.join(available_targets)}
+It's night. You may choose one player to unmask (reveal their role to yourself).
+Available players to unmask: {', '.join(available_targets)}
 
 Respond in JSON format with these exact keys:
 {{
-  "target": "name of player to investigate (must be one of the available players, one word)",
+  "target": "name of player to unmask (must be one of the available players, one word)",
   "is_deceptive": true/false,
   "analysis": "your private reasoning for this choice (max 15-20 words)"
 }}
@@ -215,21 +220,18 @@ IMPORTANT: The "target" must be exactly one of the available player names: {avai
         result = self.call_model(prompt, max_tokens=300)
         target = result.get("target", "")
         
-        # Validate that the target is actually in the available targets
+        # Validate that the target is actually in the available players
         if target not in available_targets:
-            # If invalid target, try to extract a valid name from the response
             if "raw" in result:
                 raw_response = result["raw"]
                 for player in available_targets:
                     if player in raw_response:
                         target = player
                         break
-            
-            # If still no valid target, pick the first available target
             if target not in available_targets:
                 target = available_targets[0]
                 result["target"] = target
-                result["fallback"] = "Used first available target due to invalid response"
+                result["fallback"] = "Used first available player due to invalid response"
         
         self.scratchpad.append(result.get("analysis", ""))
         return target, result
