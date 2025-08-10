@@ -1,17 +1,23 @@
 from game_graph import graph, GameState  
 from player import Player             
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 import os
 import argparse
+from dotenv import load_dotenv
 
-def get_llm(model_name="gemini-1.5-flash", api_key=None):
+load_dotenv()
+
+api_key = os.getenv("OPENAI_API_KEY")
+print(api_key)
+
+def get_llm(model_name="gpt-4o", api_key=None):
     """Initialize the language model with configurable parameters."""
     if api_key:
-        os.environ["GOOGLE_API_KEY"] = api_key
-    elif not os.environ.get("GOOGLE_API_KEY"):
-        raise ValueError("GOOGLE_API_KEY environment variable not set and no API key provided")
+        os.environ["OPENAI_API_KEY"] = api_key
+    elif not os.environ.get("OPENAI_API_KEY"):
+        raise ValueError("OPENAI_API_KEY environment variable not set and no API key provided")
     
-    return ChatGoogleGenerativeAI(
+    return ChatOpenAI(
         model=model_name,
         temperature=0.7
     )
@@ -78,12 +84,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Werewolf Game with AI players")
     parser.add_argument(
         "--model", 
-        default="gemini-1.5-flash",
-        help="Model to use (default: gemini-1.5-flash). Options: gemini-pro, gemini-1.5-pro, gemini-1.5-flash"
+        default="gpt-4o",
+        help="Model to use (default: gpt-4o). Options: gpt-4o, gpt-4-turbo, gpt-3.5-turbo"
     )
     parser.add_argument(
         "--api-key",
-        help="Google API key (alternatively set GOOGLE_API_KEY environment variable)"
+        help="OpenAI API key (alternatively set OPENAI_API_KEY environment variable)"
     )
     
     args = parser.parse_args()
@@ -92,8 +98,7 @@ if __name__ == "__main__":
         # If no API key provided via args, try to use the existing one from the file (temporarily)
         if not args.api_key and not os.environ.get("GOOGLE_API_KEY"):
             # Temporarily use the key from your original file for testing
-            args.api_key = "AIzaSyAO_DPLwLl0RQF1h0EPm9yBgSJnicriA8k"
-            print("Using embedded API key for testing. Please set GOOGLE_API_KEY environment variable for production use.")
+            args.api_key = ""
         
         final_state = run_werewolf_game(args.model, args.api_key)
         

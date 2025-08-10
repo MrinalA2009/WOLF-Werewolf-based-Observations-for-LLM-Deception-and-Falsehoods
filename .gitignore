@@ -39,3 +39,7 @@ build/
 *.pid
 *.cache
 *.db
+
+#api
+.env
+
