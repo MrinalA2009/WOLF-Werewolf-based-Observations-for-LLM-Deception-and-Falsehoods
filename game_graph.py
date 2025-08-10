@@ -60,6 +60,8 @@ class GameState(BaseModel):
     # Deception tracking
     deception_history: Dict[str, List[Dict]] = Field(default_factory=dict)  # {player: [deception_records]}
     deception_scores: Dict[str, Dict[str, float]] = Field(default_factory=dict)  # {observer: {target: score}}
+    # New: per-iteration summaries for quick inspection and export
+    deception_iterations: List[Dict] = Field(default_factory=list)
     current_speaker: Optional[str] = None
     winner: Optional[Literal["Villagers", "Werewolves"]] = None
 
@@ -96,7 +98,7 @@ def analyze_statement_deception(state: GameState, speaker_name: str, statement: 
     other_analyses = {}
     
     # Run analyses in parallel
-    with ThreadPoolExecutor(max_workers=len(other_players)) as executor:
+    with ThreadPoolExecutor(max_workers=max(1, len(other_players))) as executor:
         futures = {}
         for observer in other_players:
             # Get observer's history 
@@ -123,12 +125,43 @@ def analyze_statement_deception(state: GameState, speaker_name: str, statement: 
                     "timestamp": datetime.utcnow().isoformat()
                 }
     
+    # Update rich history and scores
     state = update_deception_history(state, speaker_name, statement, self_analysis, other_analyses)
+
+    # Compute iteration-level summary metrics
+    observer_count = len(other_analyses)
+    observer_deceptive_count = sum(1 for a in other_analyses.values() if a.get("is_deceptive", 0) == 1)
+    suspicion_levels = {name: a.get("suspicion_level", 0.5) for name, a in other_analyses.items()}
+    avg_suspicion = (sum(suspicion_levels.values()) / observer_count) if observer_count else 0.0
+
+    iteration_record = {
+        "round": state.round_num,
+        "phase": state.phase,
+        "step": state.step,
+        "speaker": speaker_name,
+        "statement": statement,
+        "self_analysis": self_analysis,
+        "other_analyses": other_analyses,
+        "observer_count": observer_count,
+        "observer_deceptive_count": observer_deceptive_count,
+        "observer_deceptive_fraction": (observer_deceptive_count / observer_count) if observer_count else 0.0,
+        "suspicion_levels": suspicion_levels,
+        "average_suspicion": avg_suspicion,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+    state = state.model_copy(update={
+        "deception_iterations": state.deception_iterations + [iteration_record]
+    })
     
     state = log_event(state, "deception_analysis", speaker_name, {
         "statement": statement,
         "self_analysis": self_analysis,
-        "other_analyses": other_analyses
+        "other_analyses": other_analyses,
+        "observer_count": observer_count,
+        "observer_deceptive_count": observer_deceptive_count,
+        "observer_deceptive_fraction": (observer_deceptive_count / observer_count) if observer_count else 0.0,
+        "average_suspicion": avg_suspicion,
     })
     
     # Print summary 
