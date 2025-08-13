@@ -1,20 +1,88 @@
-\documentclass[12pt]{article}
-\usepackage[utf8]{inputenc}
-\usepackage{hyperref}
-\usepackage{graphicx}
+\documentclass{article}
 
-\title{Multi-Agent Social Deduction Benchmark for LLM Deception}
-\author{}
-\date{}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2025
+
+
+% ready for submission
+\usepackage{neurips_2025}
+
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+%     \usepackage[preprint]{neurips_2025}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+%     \usepackage[final]{neurips_2025}
+
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2025}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+
+
+\title{A Deception Benchmark For Detective Capabilities}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{%
+  David S.~Hippocampus\thanks{Use footnote for providing further information
+    about author (webpage, alternative address)---\emph{not} for acknowledging
+    funding agencies.} \\
+  Department of Computer Science\\
+  Cranberry-Lemon University\\
+  Pittsburgh, PA 15213 \\
+  \texttt{hippo@cs.cranberry-lemon.edu} \\
+  % examples of more authors
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \AND
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-We present a multi-agent social deduction benchmark for evaluating large language models’ deceptive and detective capabilities under interactive, mixed-motive conditions. Eight role-grounded agents (Villager, Werewolf, Seer, Doctor) alternate between Night actions and Day debate/voting inside a LangGraph state machine. For every public utterance we elicit both self-assessments and peer judgements of deception using a standardized taxonomy (none, omission, distortion, fabrication, misdirection). Peer suspicion is aggregated into per-observer scores via a tempered running update that favors recent evidence while retaining history. The system logs all prompts, raw model outputs, decisions, and state transitions to NDJSON plus a final JSON snapshot for auditability and reproducibility.
-
-The benchmark yields interaction traces, per-player deception histories, and cross-perception matrices that support measurement of (i) a model’s capacity to deceive when strategically incentivized and (ii) its capacity to detect deception in others. We describe the gameflow, measurement protocol, and metrics, and provide an open implementation enabling controlled, repeated comparisons across models and configurations.
+We present a multi-agent social deduction benchmark for evaluating large language models’ deceptive and detective capabilities under interactive, mixed-motive conditions. Eight role-grounded agents (Villager, Werewolf, Seer, Doctor) alternate between Night actions and Day debate/voting inside a LangGraph state machine. For every public utterance we elicit both self-assessments and peer judgements of deception using a standardized taxonomy (none, omission, distortion, fabrication, misdirection). Peer suspicion is aggregated into per-observer scores via a tempered running update that favors recent evidence while retaining history. The system logs all prompts, raw model outputs, decisions, and state transitions to NDJSON plus a final JSON snapshot for auditability and reproducibility.The benchmark yields interaction traces, per-player deception histories, and cross-perception matrices that support measurement of (i) a model’s capacity to deceive when strategically incentivized and (ii) its capacity to detect deception in others. We describe the gameflow, measurement protocol, and metrics, and provide an open implementation enabling controlled, repeated comparisons across models and configurations.
 \end{abstract}
 
 \section{Introduction}
@@ -24,6 +92,7 @@ This work makes three contributions: (1) a LangGraph-based implementation of Wer
 
 \section{Related Works}
 Prior studies benchmark LLM social reasoning and negotiation, but few elicit sustained deceptive behavior under partial information with simultaneous detection. Social deduction settings have surfaced emergent coordination and theory-of-mind, yet standardized, logged, multi-turn deception benchmarks remain limited. Concurrent work explores agent-based evaluations with discussion and voting, as well as deception classification with static text. We build on these threads by integrating (i) a competitive, role-asymmetric game loop, (ii) statement-level deception labels from both speakers and peers, and (iii) full-fidelity logging for audit and replication.
+
 
 \section{Game Flow and Architecture}
 The controller is a LangGraph \texttt{StateGraph} over a Pydantic \texttt{GameState}. The state stores player rosters and roles (Villagers, Werewolves, Seer, Doctor), alive lists (\texttt{alive\_players}), counters (\texttt{round\_num}, \texttt{step}, \texttt{phase}), dialogue (\texttt{debate\_log}), bids and votes, deception tracking (\texttt{deception\_history}, \texttt{deception\_scores}, \texttt{deception\_iterations}), and optional file logging paths.
@@ -63,7 +132,7 @@ Our measurement couples utterance-level labeling with longitudinal aggregation:
 Agents are instantiated with role-grounded prompt templates (Villager, Werewolf, Seer, Doctor). All action interfaces return JSON with fixed keys; post-validation corrects invalid targets with explicit fallbacks recorded in logs. Private scratchpads persist chain-of-thought and investigations across turns but are never revealed to other agents; only the structured outputs are public.
 
 \subsection{Bidding, Debate, and Voting}
-Bidding uses model-elicited integers with random tie-breaking plus light mention bias. Debate statements are concise (\leq20 words) and outcome-driven. Voting instructions optionally include observer-specific deception perceptions, linking detection signals to downstream decisions.
+Bidding uses model-elicited integers with random tie-breaking plus light mention bias. Debate statements are concise and outcome-driven. Voting instructions optionally include observer-specific deception perceptions, linking detection signals to downstream decisions.
 
 \subsection{Metrics}
 We compute per-player totals of statements, self-reported deceptions, peer-detected deceptions, and average suspicion, plus final deception score matrices (how each observer perceives others). These outputs quantify both \emph{deceptive capacity} (frequency and success of misleading statements by strategically incentivized roles) and \emph{detective capacity} (accuracy and calibration of peer suspicion under uncertainty).
