@@ -1,0 +1,98 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{graphicx}
+
+\title{Multi-Agent Social Deduction Benchmark for LLM Deception}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We implement a multi-agent social deduction benchmark modeled on \textit{Werewolf} to evaluate LLM deception under interactive, multi-turn conditions. Eight LLM players---Villager, Werewolf, Seer, and Doctor---interact throughout Night and Day phases to carry out their prescribed roles. Villagers aim to identify and exile the Werewolves. Werewolves seek to eliminate Villagers whilst remaining undetected. Each night, the Seer learns private information regarding a single player's role, and the Doctor is able to protect a single player from elimination. During the day, players debate and vote to exile a single player. A LangGraph-based controller enforces rules, transitions, and win conditions; a structured logger records all actions, reasoning snippets, and deception assessments for reproducible analysis.
+\end{abstract}
+
+\section{Introduction}
+
+\section{Related Works}
+
+\section{Methodology}
+
+\subsection{Game Overview}
+The benchmark involves a simulated \textit{Werewolf}-style game. The \textbf{GameState} manages players, roles, and phases, with LangGraph orchestrating turn-by-turn interactions. Roles include Villager, Werewolf, Seer, and Doctor. The Villagers attempt to find Werewolves; the Werewolves aim to survive and remove Villagers.
+
+\subsection{Game Flow and State Transitions (Architecture)}
+The \texttt{GameState} stores:
+\begin{itemize}
+    \item Player rosters and role assignments.
+    \item Alive players (\texttt{alive\_players}).
+    \item Counters for round, step, and phase (\texttt{round\_num}, \texttt{step}, \texttt{phase}).
+    \item Action histories (bids, votes, debate logs).
+    \item Deception tracking (\texttt{deception\_history}, \texttt{deception\_scores}).
+    \item Structured game logs (\texttt{game\_logs}).
+\end{itemize}
+
+Execution is organized as a LangGraph StateGraph, where each phase is a node and transitions depend on rules and the evolving \texttt{GameState}.
+
+\paragraph{Night Phase:}
+\begin{enumerate}
+    \item Werewolves choose a target (\texttt{eliminate}).
+    \item Doctor chooses a player to save (\texttt{protect}).
+    \item Seer learns the role of one player (\texttt{unmask}).
+    \item Resolve outcomes (\texttt{resolve\_night})—Doctor protection may cancel eliminations.
+    \item Check win conditions (\texttt{check\_winner\_night}).
+\end{enumerate}
+
+\paragraph{Day Phase:}
+\begin{enumerate}
+    \item Debate phase—turn order determined by bidding.
+    \item Vote to exile a player.
+    \item Remove exiled player from \texttt{alive\_players}.
+    \item Check win conditions (\texttt{check\_winner\_day}).
+    \item Produce summaries and deception statistics.
+\end{enumerate}
+
+\subsection{AI Players, Prompts, and Scratchpad Reasoning}
+Each agent:
+\begin{itemize}
+    \item Has a fixed role and private scratchpad memory.
+    \item For every action (\texttt{eliminate}, \texttt{save}, \texttt{unmask}, \texttt{debate}, \texttt{vote}, \texttt{summarize}), generates a JSON prompt enumerating valid targets and required keys.
+    \item Produces public actions (e.g., debate statements, votes) and private analysis (stored in scratchpad).
+\end{itemize}
+The scratchpad acts as persistent chain-of-thought memory across turns and is never revealed to other players.
+
+\subsection{Deception Detection, Bidding, Debate, and Voting}
+When a public statement is made:
+\begin{enumerate}
+    \item \textbf{Self-analysis:} Speaker classifies their statement as deceptive or truthful, with deception type (none, omission, distortion, fabrication, misdirection) and confidence.
+    \item \textbf{Peer analysis:} Other players analyze the statement, returning deception label, confidence, suspicion score, and reasoning.
+\end{enumerate}
+
+Deception history is updated using a weighted moving average (70\% new, 30\% prior).
+
+\paragraph{Bidding:}
+Players submit a bid (0–10) indicating eagerness to speak. Ties are broken randomly or with a fixed seed for deterministic runs.
+
+\paragraph{Voting:}
+Votes are tallied; majority exile occurs. Doctor’s protection can prevent Werewolves’ night kills. Victory conditions:
+\begin{itemize}
+    \item Villagers win if no Werewolves remain.
+    \item Werewolves win if their count $\geq$ number of Villagers.
+\end{itemize}
+
+\subsection{Metrics}
+At the end of a match, the \texttt{deception\_summary} reports:
+\begin{enumerate}
+    \item Total statements analyzed.
+    \item Per-player statistics: total statements, self-reported deceptions, peer-detected deceptions, average suspicion.
+    \item Final deception score matrix.
+\end{enumerate}
+
+\section{Limitations}
+
+\appendix
+
+\end{document}
