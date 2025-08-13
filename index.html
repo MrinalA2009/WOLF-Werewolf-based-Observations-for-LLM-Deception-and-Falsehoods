@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Features — Debate Trainer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="js/debatetrainer.css" />
+    <style>
+      :root {
+        --bg: #0b0e14;
+        --panel: #111520;
+        --muted: #8a93a6;
+        --text: #eaeef7;
+        --primary: #5b8cff;
+        --primary-600: #3e6fec;
+        --accent: #22c55e;
+        --danger: #ef4444;
+        --card: #141a26;
+        --card-2: #0f1420;
+        --border: #1f2633;
+        --chip: #1b2230;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        background: linear-gradient(180deg, var(--bg), #0a0d13);
+        color: var(--text);
+      }
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand .logo {
+        width: 36px; height: 36px;
+        border-radius: 10px;
+        background: radial-gradient(120% 120% at 20% 20%, #7aa2ff 0%, #5b8cff 40%, #3e6fec 70%, #294fb1 100%);
+        box-shadow: 0 6px 24px rgba(91, 140, 255, 0.35), inset 0 0 0 1px rgba(255,255,255,0.05);
+      }
+      h1 {
+        font-size: 20px; font-weight: 700; letter-spacing: 0.2px; margin: 0;
+      }
+      .muted { color: var(--muted); font-weight: 500; }
+
+      .section-title {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        margin: 18px 0 8px;
+      }
+      .section-title h2 { font-size: 18px; margin: 0; }
+
+      .feature-row {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 78%;
+        gap: 14px;
+        padding: 10px 2px 18px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+      }
+      @media (min-width: 720px) {
+        .feature-row { grid-auto-columns: 380px; }
+      }
+      .feature-row::-webkit-scrollbar { height: 10px; }
+      .feature-row::-webkit-scrollbar-thumb { background: #1a2230; border-radius: 6px; }
+      .feature-row::-webkit-scrollbar-track { background: transparent; }
+
+      .feature-card {
+        scroll-snap-align: start;
+        background: linear-gradient(180deg, var(--card), var(--card-2));
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+        display: flex; flex-direction: column; gap: 14px;
+      }
+      .feature-header { display: flex; align-items: center; gap: 12px; }
+      .feature-icon {
+        width: 40px; height: 40px; border-radius: 12px; background: var(--chip);
+        display: grid; place-items: center; font-weight: 700; color: var(--primary);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+      }
+      .feature-name { font-weight: 700; letter-spacing: 0.2px; }
+      .feature-desc { color: var(--muted); font-size: 14px; line-height: 1.35; }
+      .feature-actions { display: flex; gap: 10px; }
+      .btn {
+        background: var(--chip); color: var(--text); border: 1px solid var(--border);
+        padding: 10px 14px; border-radius: 10px; font-weight: 600; cursor: pointer;
+        transition: transform .12s ease, background .12s ease, border-color .12s ease;
+      }
+      .btn:hover { transform: translateY(-1px); border-color: #2a3345; }
+      .btn-primary { background: linear-gradient(180deg, var(--primary), var(--primary-600)); border-color: transparent; }
+
+      .panel {
+        margin-top: 22px;
+        background: linear-gradient(180deg, var(--panel), #0e1320);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <div class="brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div>
+            <h1>Feature Hub</h1>
+            <div class="muted">Explore tools to level up your persuasion</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="section-title">
+        <h2>All Features</h2>
+        <div class="muted">Swipe sideways to browse</div>
+      </div>
+      <div class="feature-row" id="feature-row">
+        <div class="feature-card">
+          <div class="feature-header">
+            <div class="feature-icon">DT</div>
+            <div class="feature-name">Debate Trainer</div>
+          </div>
+          <div class="feature-desc">Critique, iterate, and spar against AI opponents with adjustable Elo. Practice constructive, rebuttal, summary, and final focus speeches.</div>
+          <div class="feature-actions">
+            <button class="btn btn-primary" id="open-debate-trainer">Open</button>
+            <button class="btn" id="learn-debate-trainer">Details</button>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-header">
+            <div class="feature-icon">AN</div>
+            <div class="feature-name">Argument Notes</div>
+          </div>
+          <div class="feature-desc">A clean workspace to draft and organize flows, cases, and voters.</div>
+          <div class="feature-actions">
+            <button class="btn">Open</button>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-header">
+            <div class="feature-icon">FW</div>
+            <div class="feature-name">Flow Worksheet</div>
+          </div>
+          <div class="feature-desc">Track line-by-line responses and weighing across speeches.</div>
+          <div class="feature-actions">
+            <button class="btn">Open</button>
+          </div>
+        </div>
+        <!-- More feature cards could be listed here to demonstrate horizontal scroll -->
+      </div>
+
+      <div id="feature-panel" class="panel" style="display: none;"></div>
+    </div>
+
+    <!-- React + Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- App scripts -->
+    <script src="js/debatetrainer-elo.js"></script>
+    <script type="text/babel" data-presets="react" src="js/debatetrainer.jsx"></script>
+    <script type="text/babel" data-presets="react" src="js/app.jsx"></script>
+  </body>
+</html>

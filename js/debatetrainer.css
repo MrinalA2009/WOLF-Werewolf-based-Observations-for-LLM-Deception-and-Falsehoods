@@ -1,0 +1,105 @@
+/* Debate Trainer UI styles */
+
+:root {
+  --bg: #0b0e14;
+  --panel: #111520;
+  --muted: #8a93a6;
+  --text: #eaeef7;
+  --primary: #5b8cff;
+  --primary-600: #3e6fec;
+  --accent: #22c55e;
+  --danger: #ef4444;
+  --card: #141a26;
+  --card-2: #0f1420;
+  --border: #1f2633;
+  --chip: #1b2230;
+}
+
+.dt-root {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 920px) {
+  .dt-root { grid-template-columns: 1fr; }
+}
+
+.dt-pane {
+  background: linear-gradient(180deg, var(--card), var(--card-2));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.dt-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-weight: 700;
+}
+
+.dt-subtle { color: var(--muted); }
+
+.dt-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.dt-input, .dt-select, .dt-textarea {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+}
+.dt-textarea { min-height: 140px; resize: vertical; }
+
+.dt-btn {
+  background: var(--chip);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dt-btn.primary { background: linear-gradient(180deg, var(--primary), var(--primary-600)); border-color: transparent; }
+.dt-btn.ghost { background: transparent; }
+.dt-btn.warn { background: linear-gradient(180deg, #ef4444, #dc2626); border-color: transparent; }
+
+.dt-chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.dt-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--chip);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.dt-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 640px) { .dt-split { grid-template-columns: 1fr; } }
+
+.dt-divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+.dt-scroll { max-height: 340px; overflow: auto; padding-right: 4px; }
+.dt-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.dt-scroll::-webkit-scrollbar-thumb { background: #1a2230; border-radius: 6px; }
+
+.dt-card {
+  background: linear-gradient(180deg, var(--panel), #0e1320);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.dt-list { display: grid; gap: 10px; }
+
+.dt-elo-badge { font-weight: 800; color: var(--accent); }
+.dt-bot-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+
+.dt-inline-help { font-size: 12px; color: var(--muted); }
+
+.dt-tag { font-size: 12px; padding: 2px 6px; border-radius: 999px; background: #182132; border: 1px solid var(--border); }
