@@ -12,86 +12,64 @@
 \maketitle
 
 \begin{abstract}
-We implement a multi-agent social deduction benchmark modeled on \textit{Werewolf} to evaluate LLM deception under interactive, multi-turn conditions. Eight LLM players---Villager, Werewolf, Seer, and Doctor---interact throughout Night and Day phases to carry out their prescribed roles. Villagers aim to identify and exile the Werewolves. Werewolves seek to eliminate Villagers whilst remaining undetected. Each night, the Seer learns private information regarding a single player's role, and the Doctor is able to protect a single player from elimination. During the day, players debate and vote to exile a single player. A LangGraph-based controller enforces rules, transitions, and win conditions; a structured logger records all actions, reasoning snippets, and deception assessments for reproducible analysis.
+We present a multi-agent social deduction benchmark for evaluating large language models’ deceptive and detective capabilities under interactive, mixed-motive conditions. Eight role-grounded agents (Villager, Werewolf, Seer, Doctor) alternate between Night actions and Day debate/voting inside a LangGraph state machine. For every public utterance we elicit both self-assessments and peer judgements of deception using a standardized taxonomy (none, omission, distortion, fabrication, misdirection). Peer suspicion is aggregated into per-observer scores via a tempered running update that favors recent evidence while retaining history. The system logs all prompts, raw model outputs, decisions, and state transitions to NDJSON plus a final JSON snapshot for auditability and reproducibility.
+
+The benchmark yields interaction traces, per-player deception histories, and cross-perception matrices that support measurement of (i) a model’s capacity to deceive when strategically incentivized and (ii) its capacity to detect deception in others. We describe the gameflow, measurement protocol, and metrics, and provide an open implementation enabling controlled, repeated comparisons across models and configurations.
 \end{abstract}
 
 \section{Introduction}
+Modern LLMs exhibit strong cooperative reasoning yet remain under-tested in adversarial, multi-party settings where incentives to mislead are explicit. Social deduction games such as Werewolf/Mafia naturally induce deception, partial information, and theory-of-mind reasoning. We operationalize this setting as a reproducible benchmark with role-grounded agents, programmable rules, and structured logging.
+
+This work makes three contributions: (1) a LangGraph-based implementation of Werewolf with role-conditioned agents and strict phase transitions; (2) a deception measurement protocol that couples self-assessment with concurrent peer analysis for every public utterance; and (3) metrics that summarize deception production and detection across players and time. The benchmark supports plug-in model backends and seedable randomness to enable controlled comparisons and ablations.
 
 \section{Related Works}
+Prior studies benchmark LLM social reasoning and negotiation, but few elicit sustained deceptive behavior under partial information with simultaneous detection. Social deduction settings have surfaced emergent coordination and theory-of-mind, yet standardized, logged, multi-turn deception benchmarks remain limited. Concurrent work explores agent-based evaluations with discussion and voting, as well as deception classification with static text. We build on these threads by integrating (i) a competitive, role-asymmetric game loop, (ii) statement-level deception labels from both speakers and peers, and (iii) full-fidelity logging for audit and replication.
+
+\section{Game Flow and Architecture}
+The controller is a LangGraph \texttt{StateGraph} over a Pydantic \texttt{GameState}. The state stores player rosters and roles (Villagers, Werewolves, Seer, Doctor), alive lists (\texttt{alive\_players}), counters (\texttt{round\_num}, \texttt{step}, \texttt{phase}), dialogue (\texttt{debate\_log}), bids and votes, deception tracking (\texttt{deception\_history}, \texttt{deception\_scores}, \texttt{deception\_iterations}), and optional file logging paths.
+
+Phases are implemented as nodes with conditional routing by the \texttt{phase} field:
+\begin{itemize}
+  \item Night: \texttt{eliminate} (Werewolves choose a target), \texttt{protect} (Doctor saves one), \texttt{unmask} (Seer investigates), \texttt{resolve\_night}, \texttt{check\_winner\_night}
+  \item Day: \texttt{debate} (bidding determines speaker order; statements appended to \texttt{debate\_log}), \texttt{vote}, \texttt{exile}, \texttt{check\_winner\_day}, \texttt{summarize}, then \texttt{end}
+\end{itemize}
+
+Bidding uses model-elicited integers with random tiebreaks and a light mention bias. Debate and voting invoke role-grounded agent prompts that return JSON with fixed keys; invalid outputs are corrected using conservative fallbacks and recorded. Deception peer analyses run concurrently across observers. All actions are logged via a structured \texttt{log\_event} stream to NDJSON alongside a final full-state JSON snapshot for reproducibility.
+
+Victory conditions are checked after night resolution and after exile:
+\begin{itemize}
+  \item Villagers win if no Werewolves remain.
+  \item Werewolves win if the number of Werewolves \( \geq \) the number of Villagers.
+\end{itemize}
 
 \section{Methodology}
 
-\subsection{Game Overview}
-The benchmark involves a simulated \textit{Werewolf}-style game. The \textbf{GameState} manages players, roles, and phases, with LangGraph orchestrating turn-by-turn interactions. Roles include Villager, Werewolf, Seer, and Doctor. The Villagers attempt to find Werewolves; the Werewolves aim to survive and remove Villagers.
+\subsection{Gameflow}
+We instantiate a faithful, programmable \textit{Werewolf}-style loop. The \textbf{GameState} (Pydantic) stores player sets, role assignments, alive lists, phase/step counters, dialogue, bids, votes, and deception trackers. A LangGraph StateGraph encodes nodes for Night actions (eliminate, protect, unmask, resolve, check) and Day actions (debate, vote, exile, check, summarize). Conditional edges route strictly by rules and current state, enabling deterministic replay.
 
-\subsection{Game Flow and State Transitions (Architecture)}
-The \texttt{GameState} stores:
-\begin{itemize}
-    \item Player rosters and role assignments.
-    \item Alive players (\texttt{alive\_players}).
-    \item Counters for round, step, and phase (\texttt{round\_num}, \texttt{step}, \texttt{phase}).
-    \item Action histories (bids, votes, debate logs).
-    \item Deception tracking (\texttt{deception\_history}, \texttt{deception\_scores}).
-    \item Structured game logs (\texttt{game\_logs}).
-\end{itemize}
+\paragraph{Night:} Werewolves select a target (eliminate); the Doctor selects a protection target (protect); the Seer privately investigates a single player (unmask). Outcomes resolve (resolve\_night) and an early win check runs (check\_winner\_night).
 
-Execution is organized as a LangGraph StateGraph, where each phase is a node and transitions depend on rules and the evolving \texttt{GameState}.
+\paragraph{Day:} Players bid eagerness to speak (0–10). A speaker produces a JSON-constrained statement; then all peers may analyze it. After a bounded number of debate turns, all alive players vote to exile. Majority removes one player; otherwise no exile. A second win check runs.
 
-\paragraph{Night Phase:}
+\subsection{Measurement Protocol}
+Our measurement couples utterance-level labeling with longitudinal aggregation:
 \begin{enumerate}
-    \item Werewolves choose a target (\texttt{eliminate}).
-    \item Doctor chooses a player to save (\texttt{protect}).
-    \item Seer learns the role of one player (\texttt{unmask}).
-    \item Resolve outcomes (\texttt{resolve\_night})—Doctor protection may cancel eliminations.
-    \item Check win conditions (\texttt{check\_winner\_night}).
+    \item For each public statement, the speaker performs \emph{self-analysis} and all other alive players perform \emph{peer analysis}. Analyses return a binary deception label, confidence, deception type, reasoning, and a scalar suspicion level (peers only).
+    \item We update a per-observer deception score for each target using a tempered running update (0.7 new, 0.3 prior), yielding a cross-perception matrix over time.
+    \item We log a rich record comprising context snapshots (alive set, speaker role, dialogue tail), prompts, raw model outputs, and timestamps to support audit and offline re-scoring.
 \end{enumerate}
 
-\paragraph{Day Phase:}
-\begin{enumerate}
-    \item Debate phase—turn order determined by bidding.
-    \item Vote to exile a player.
-    \item Remove exiled player from \texttt{alive\_players}.
-    \item Check win conditions (\texttt{check\_winner\_day}).
-    \item Produce summaries and deception statistics.
-\end{enumerate}
+\subsection{Agents, Prompts, and Private Scratchpads}
+Agents are instantiated with role-grounded prompt templates (Villager, Werewolf, Seer, Doctor). All action interfaces return JSON with fixed keys; post-validation corrects invalid targets with explicit fallbacks recorded in logs. Private scratchpads persist chain-of-thought and investigations across turns but are never revealed to other agents; only the structured outputs are public.
 
-\subsection{AI Players, Prompts, and Scratchpad Reasoning}
-Each agent:
-\begin{itemize}
-    \item Has a fixed role and private scratchpad memory.
-    \item For every action (\texttt{eliminate}, \texttt{save}, \texttt{unmask}, \texttt{debate}, \texttt{vote}, \texttt{summarize}), generates a JSON prompt enumerating valid targets and required keys.
-    \item Produces public actions (e.g., debate statements, votes) and private analysis (stored in scratchpad).
-\end{itemize}
-The scratchpad acts as persistent chain-of-thought memory across turns and is never revealed to other players.
-
-\subsection{Deception Detection, Bidding, Debate, and Voting}
-When a public statement is made:
-\begin{enumerate}
-    \item \textbf{Self-analysis:} Speaker classifies their statement as deceptive or truthful, with deception type (none, omission, distortion, fabrication, misdirection) and confidence.
-    \item \textbf{Peer analysis:} Other players analyze the statement, returning deception label, confidence, suspicion score, and reasoning.
-\end{enumerate}
-
-Deception history is updated using a weighted moving average (70\% new, 30\% prior).
-
-\paragraph{Bidding:}
-Players submit a bid (0–10) indicating eagerness to speak. Ties are broken randomly or with a fixed seed for deterministic runs.
-
-\paragraph{Voting:}
-Votes are tallied; majority exile occurs. Doctor’s protection can prevent Werewolves’ night kills. Victory conditions:
-\begin{itemize}
-    \item Villagers win if no Werewolves remain.
-    \item Werewolves win if their count $\geq$ number of Villagers.
-\end{itemize}
+\subsection{Bidding, Debate, and Voting}
+Bidding uses model-elicited integers with random tie-breaking plus light mention bias. Debate statements are concise (\leq20 words) and outcome-driven. Voting instructions optionally include observer-specific deception perceptions, linking detection signals to downstream decisions.
 
 \subsection{Metrics}
-At the end of a match, the \texttt{deception\_summary} reports:
-\begin{enumerate}
-    \item Total statements analyzed.
-    \item Per-player statistics: total statements, self-reported deceptions, peer-detected deceptions, average suspicion.
-    \item Final deception score matrix.
-\end{enumerate}
+We compute per-player totals of statements, self-reported deceptions, peer-detected deceptions, and average suspicion, plus final deception score matrices (how each observer perceives others). These outputs quantify both \emph{deceptive capacity} (frequency and success of misleading statements by strategically incentivized roles) and \emph{detective capacity} (accuracy and calibration of peer suspicion under uncertainty).
 
 \section{Limitations}
+Our evaluation currently uses scripted role distributions, a fixed player set and map size, and bounded debate turns. While these choices improve control and reproducibility, they may under-sample longer-horizon deception strategies and coalition dynamics. The deception labels are model-elicited and therefore subject to anchoring and consistency artifacts; we mitigate with peer analysis and longitudinal aggregation but do not claim ground-truth. Finally, prompts expose models to self-assessment instructions that could themselves shape behavior; auditing via preserved prompts and raw outputs is provided to enable re-scoring and alternative labelers.
 
 \appendix
 
