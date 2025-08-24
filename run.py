@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 import os
 import argparse
 from dotenv import load_dotenv
-from logs import init_logging_state, write_final_state
+from logs import init_logging_state, write_final_state, print_header, print_subheader, print_kv
 
 load_dotenv()
 
@@ -27,7 +27,8 @@ def get_llm(model_name="gpt-4o", api_key=None):
 
 def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs", enable_file_logging: bool = True):
     """Run a werewolf game with the specified model."""
-    print(f"Starting Werewolf Game with model: {model_name}")
+    print_header("Starting Werewolf Game")
+    print_kv("Model", model_name)
     
     # Initialize the language model
     llm = get_llm(model_name, api_key)
@@ -74,7 +75,8 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs"
     initial_state = init_logging_state(initial_state, log_dir=log_dir, enable_file_logging=enable_file_logging)
 
     # Run the game
-    print("Compiling and running the game graph...")
+    print_subheader("Execute")
+    print_kv("Action", "Compiling and running the game graph...")
     runnable = graph.compile()
     final_state = runnable.invoke(initial_state, config={
         "recursion_limit": 1000,
@@ -87,15 +89,16 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs"
     # Persist the final state to disk if logging is enabled
     write_final_state(final_state)
 
-    print("Game completed successfully!")
+    print_subheader("Status")
+    print_kv("Result", "Game completed successfully!")
 
     # Print helpful info for locating logs
     paths = getattr(final_state, "log_paths", {})
     if paths:
-        print("\n Log files:")
-        print(f"  Events (NDJSON): {paths.get('events')}")
-        print(f"  Final State JSON: {paths.get('state')}")
-        print(f"  Run Metadata: {paths.get('meta')}")
+        print_subheader("Log Files")
+        print_kv("Events (NDJSON)", paths.get('events'), indent=2)
+        print_kv("Final State JSON", paths.get('state'), indent=2)
+        print_kv("Run Metadata", paths.get('meta'), indent=2)
     return final_state
 
 
@@ -126,15 +129,16 @@ if __name__ == "__main__":
     try:
         # If no API key provided via args, rely on environment variables loaded from .env
         final_state = run_werewolf_game(args.model, args.api_key, log_dir=args.log_dir, enable_file_logging=(not args.no_file_logging))
-        
-        print("\n Game Results:")
-        print(f"Final alive players: {final_state.alive_players}")
+
+        print_subheader("Game Results")
+        print_kv("Final alive players", final_state.alive_players, indent=2)
         if hasattr(final_state, 'winner'):
-            print(f"Winner: {final_state.winner}")
+            print_kv("Winner", final_state.winner, indent=2)
         
     except Exception as e:
-        print(f" Error running game: {e}")
-        print("\n Troubleshooting:")
-        print("1. Make sure your OPENAI API key is valid")
-        print("2. Check that all dependencies are installed: pip install -r requirements.txt")
-        print("3. Try running with a different model: python run.py --model gpt-4o-mini")
+        print_subheader("Error")
+        print_kv("Message", f"{e}")
+        print_subheader("Troubleshooting")
+        print_kv("1", "Make sure your OPENAI API key is valid", indent=2)
+        print_kv("2", "Install dependencies: pip install -r requirements.txt", indent=2)
+        print_kv("3", "Try a different model: python run.py --model gpt-4o-mini", indent=2)
