@@ -214,14 +214,52 @@ def generate_deception_summary(state: GameState) -> Dict:
         summary["total_statements_analyzed"] += len(history)
     
     return summary
+def _compute_current_winner(state: GameState) -> Optional[Literal["Villagers", "Werewolves"]]:
+    """Compute winner based on current alive players.
+
+    Villagers win if no Werewolves remain.
+    Werewolves win if Werewolves >= Villagers.
+    Otherwise, no winner yet.
+    """
+    wolves_alive = [p for p in state.werewolves if p in state.alive_players]
+    villagers_alive = [p for p in state.alive_players if p not in wolves_alive]
+
+    if not wolves_alive:
+        return "Villagers"
+    if len(wolves_alive) >= len(villagers_alive):
+        return "Werewolves"
+    return None
 def eliminate_node(state: GameState, config: RunnableConfig) -> GameState:
     player_objects = config.get("configurable", {}).get("player_objects", {})
+    # Early terminal check: if a winner is already determined, end now
+    immediate_winner = _compute_current_winner(state)
+    if immediate_winner:
+        state = state.model_copy(update={
+            "winner": immediate_winner,
+            "phase": "summarize",
+            "step": 0
+        })
+        state = log_event(state, "check_winner_night", "system", {
+            "winner": immediate_winner,
+            "context": "early_check_in_eliminate"
+        })
+        return state
 
     alive_wolves = [
         name for name in state.werewolves if name in state.alive_players
     ]
     if not alive_wolves:
-        raise ValueError("No werewolves left to eliminate.")
+        # No werewolves left; skip elimination and proceed with night flow
+        state = state.model_copy(update={
+            "eliminated": None,
+            "eliminate_log": "No werewolves alive; skipping elimination.",
+            "phase": "protect"
+        })
+        state = log_event(state, "eliminate", "system", {
+            "target": None,
+            "raw_output": {"info": "No werewolves alive; skipped."}
+        })
+        return state
 
     acting_wolf = random.choice(alive_wolves)
     eliminated, log = player_objects[acting_wolf].eliminate(state.alive_players)
@@ -346,15 +384,7 @@ def night_node(state: GameState, config: RunnableConfig) -> GameState:
     
 def checkwinner_node(state: GameState, config: RunnableConfig) -> GameState:
     """Return to day phase or finish game if a faction wins."""
-    wolves_alive = [p for p in state.werewolves if p in state.alive_players]
-    villagers_alive = [p for p in state.alive_players if p not in wolves_alive]
-
-    if not wolves_alive:
-        winner = "Villagers"
-    elif len(wolves_alive) >= len(villagers_alive):
-        winner = "Werewolves"
-    else:
-        winner = None
+    winner = _compute_current_winner(state)
 
     next_phase = "debate" if not winner else "summarize"  # ends/explains  if completed
 
@@ -478,15 +508,7 @@ def exile_node(state: GameState, config: RunnableConfig) -> GameState:
     return state
 
 def check_winner_day_node(state: GameState, config: RunnableConfig) -> GameState:
-    wolves_alive = [p for p in state.werewolves if p in state.alive_players]
-    villagers_alive = [p for p in state.alive_players if p not in wolves_alive]
-
-    if not wolves_alive:
-        winner = "Villagers"
-    elif len(wolves_alive) >= len(villagers_alive):
-        winner = "Werewolves"
-    else:
-        winner = None
+    winner = _compute_current_winner(state)
 
     state = state.model_copy(update={
         "winner": winner,
