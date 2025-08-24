@@ -8,6 +8,9 @@ This project streams all game events to disk and writes a final full-state JSON 
   - `details` may include raw model prompts and responses under `_prompt` and `_raw_response`
 - Final State JSON: `logs/<run_id>/game_state.json`
   - Full Pydantic-serialized `GameState` including `game_logs`, deception history, scores, etc.
+- Final Metrics JSON: `logs/<run_id>/final_metrics.json`
+  - Clean research-ready metrics only (no raw prompts/responses)
+  - Includes: per-player deception totals and average suspicion, cross-perception score matrix, per-observer detection accuracy (accuracy/precision/recall/f1), and time/round trends of average suspicion and fraction of observers flagging deception
 - Run Metadata: `logs/<run_id>/run_meta.json`
   - Players, roles, model name, timestamps, and convenience pointers
 - Runs Index: `logs/index.jsonl`
