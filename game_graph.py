@@ -22,8 +22,8 @@ from langgraph.graph import StateGraph, END
 from collections import Counter
 from Bidding import get_bid, choose_next_speaker
 from concurrent.futures import ThreadPoolExecutor
-from logs import log_event
-from deception_detection import DeceptionDetector, update_deception_history
+from logs import log_event, print_header, print_subheader, print_kv, print_list, print_matrix
+from deception_detection import DeceptionDetector, update_deception_history, compute_observer_accuracy
 from datetime import datetime
 
 class GameState(BaseModel):
@@ -524,38 +524,48 @@ def summary_node(state: GameState, config: RunnableConfig) -> GameState:
     return state
 
 def end_node(state: GameState, config: RunnableConfig) -> GameState:
-    print("\n--- GAME OVER ---")
-    print(f"Winner: {state.winner}")
-    print(f"\nFinal alive players: {state.alive_players}")
-    print(f"Eliminated: {state.eliminated}")
-    print(f"Exiled: {state.exiled}")
-    print("\nDebate Log:")
+    print_header("GAME OVER")
+    print_kv("Winner", state.winner)
+    print_kv("Final alive players", state.alive_players)
+    print_kv("Eliminated", state.eliminated)
+    print_kv("Exiled", state.exiled)
+
+    print_subheader("Debate Log")
     for turn in state.debate_log:
-        print(f"{turn[0]}: {turn[1]}")
-  
-    # Print deception analysis summary
+        print_kv(turn[0], turn[1], indent=2)
+
     deception_summary = generate_deception_summary(state)
-    print(f"\n--- DECEPTION ANALYSIS SUMMARY ---")
-    print(f"Total statements analyzed: {deception_summary['total_statements_analyzed']}")
-    
+    print_subheader("Deception Analysis Summary")
+    print_kv("Total statements analyzed", deception_summary['total_statements_analyzed'])
+
     for player, stats in deception_summary['deception_by_player'].items():
-        print(f"\n{player} ({state.roles.get(player, 'Unknown')}):")
-        print(f"  - Statements made: {stats['total_statements']}")
-        print(f"  - Self-reported deceptions: {stats['self_reported_deceptions']}")
-        print(f"  - Peer-detected deceptions: {stats['peer_detected_deceptions']}")
-        print(f"  - Average suspicion level: {stats['average_suspicion']:.2f}")
-    
-    print(f"\nFinal deception scores (how each player perceives others):")
-    for observer, scores in state.deception_scores.items():
-        print(f"{observer}: {', '.join([f'{target}={score:.2f}' for target, score in scores.items()])}")
+        print_subheader(f"{player} ({state.roles.get(player, 'Unknown')})")
+        print_kv("Statements made", stats['total_statements'], indent=2)
+        print_kv("Self-reported deceptions", stats['self_reported_deceptions'], indent=2)
+        print_kv("Peer-detected deceptions", stats['peer_detected_deceptions'], indent=2)
+        print_kv("Average suspicion level", f"{stats['average_suspicion']:.2f}", indent=2)
+
+    print_matrix("Final deception scores (observer -> target perception)", state.deception_scores, indent=2)
+
+    # Observer accuracy
+    observer_metrics = compute_observer_accuracy(state)
+    print_subheader("Observer Accuracy by Player")
+    for observer, stat in observer_metrics.items():
+        print_kv(observer, "", indent=0)
+        print_kv("Total", stat.get("total", 0), indent=2)
+        print_kv("TP/TN/FP/FN", f"{stat.get('tp',0)}/{stat.get('tn',0)}/{stat.get('fp',0)}/{stat.get('fn',0)}", indent=2)
+        print_kv("Accuracy", f"{stat.get('accuracy',0.0):.2f}", indent=2)
+        print_kv("Precision", f"{stat.get('precision',0.0):.2f}", indent=2)
+        print_kv("Recall", f"{stat.get('recall',0.0):.2f}", indent=2)
+        print_kv("F1", f"{stat.get('f1',0.0):.2f}", indent=2)
 
     # Print where logs were saved (if enabled)
     paths = getattr(state, "log_paths", {})
     if paths:
-        print("\nFull logs saved to:")
-        print(f"  Events (NDJSON): {paths.get('events')}")
-        print(f"  Final State JSON: {paths.get('state')}")
-        print(f"  Run Metadata: {paths.get('meta')}")
+        print_subheader("Log Files")
+        print_kv("Events (NDJSON)", paths.get('events'), indent=2)
+        print_kv("Final State JSON", paths.get('state'), indent=2)
+        print_kv("Run Metadata", paths.get('meta'), indent=2)
     return state
 
 #game state LangChain graph

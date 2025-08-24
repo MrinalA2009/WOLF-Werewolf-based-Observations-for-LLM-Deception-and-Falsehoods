@@ -4,7 +4,8 @@ Simple test script to demonstrate the deception detection system implementation.
 This tests only the deception detection components without LLM dependencies.
 """
 
-from deception_detection import DeceptionDetector, update_deception_history
+from deception_detection import DeceptionDetector, update_deception_history, compute_observer_accuracy
+from logs import print_header, print_subheader, print_kv
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Literal
 from datetime import datetime
@@ -102,8 +103,7 @@ class MockLLM:
 
 def test_deception_detection():
     """Test the deception detection system with mock data."""
-    print("🔍 Testing Deception Detection System")
-    print("=" * 50)
+    print_header("🔍 Testing Deception Detection System")
     
     # Initialize test game state
     state = TestGameState(
@@ -119,25 +119,23 @@ def test_deception_detection():
     # Initialize deception detector with mock LLM
     detector = DeceptionDetector(MockLLM())
     
-    print("📝 Initial Game State:")
-    print(f"Players: {state.players}")
-    print(f"Roles: {state.roles}")
-    print(f"Phase: {state.phase}")
-    print()
+    print_subheader("📝 Initial Game State")
+    print_kv("Players", state.players)
+    print_kv("Roles", state.roles)
+    print_kv("Phase", state.phase)
     
     # Test Case 1: Alice makes a suspicious statement
-    print("🎭 Test Case 1: Alice's Statement Analysis")
+    print_subheader("🎭 Test Case 1: Alice's Statement Analysis")
     statement1 = "I suspect Bob is acting strangely"
-    print(f"Statement: '{statement1}'")
+    print_kv("Statement", f"{statement1}")
     
     # Self-analysis by Alice
     self_analysis1 = detector.analyze_self_deception("Alice", statement1, "Debate phase, round 1")
-    print("Self-Analysis:")
-    print(f"  Chain of Thought: {self_analysis1['chain_of_thought']}")
-    print(f"  Is Deceptive: {self_analysis1['is_deceptive']}")
-    print(f"  Confidence: {self_analysis1['confidence']}")
-    print(f"  Reasoning: {self_analysis1['reasoning']}")
-    print()
+    print_subheader("Self-Analysis")
+    print_kv("Chain of Thought", self_analysis1['chain_of_thought'], indent=2)
+    print_kv("Is Deceptive", self_analysis1['is_deceptive'], indent=2)
+    print_kv("Confidence", self_analysis1['confidence'], indent=2)
+    print_kv("Reasoning", self_analysis1['reasoning'], indent=2)
     
     # Peer analyses
     other_analyses1 = {}
@@ -145,29 +143,27 @@ def test_deception_detection():
         analysis = detector.analyze_other_deception(observer, "Alice", statement1, "Debate phase, round 1")
         analysis["timestamp"] = datetime.utcnow().isoformat()
         other_analyses1[observer] = analysis
-        print(f"{observer}'s Analysis:")
-        print(f"  Chain of Thought: {analysis['chain_of_thought']}")
-        print(f"  Is Deceptive: {analysis['is_deceptive']}")
-        print(f"  Suspicion Level: {analysis['suspicion_level']}")
-        print(f"  Reasoning: {analysis['reasoning']}")
-        print()
+        print_subheader(f"{observer}'s Analysis")
+        print_kv("Chain of Thought", analysis['chain_of_thought'], indent=2)
+        print_kv("Is Deceptive", analysis['is_deceptive'], indent=2)
+        print_kv("Suspicion Level", analysis['suspicion_level'], indent=2)
+        print_kv("Reasoning", analysis['reasoning'], indent=2)
     
     # Update deception history
     state = update_deception_history(state, "Alice", statement1, self_analysis1, other_analyses1)
     
     # Test Case 2: Bob's defensive statement
-    print("🎭 Test Case 2: Bob's Statement Analysis") 
+    print_subheader("🎭 Test Case 2: Bob's Statement Analysis") 
     statement2 = "I'm innocent, you have to believe me!"
-    print(f"Statement: '{statement2}'")
+    print_kv("Statement", f"{statement2}")
     
     # Self-analysis by Bob
     self_analysis2 = detector.analyze_self_deception("Bob", statement2, "Debate phase, round 1")
-    print("Self-Analysis:")
-    print(f"  Chain of Thought: {self_analysis2['chain_of_thought']}")
-    print(f"  Is Deceptive: {self_analysis2['is_deceptive']}")
-    print(f"  Confidence: {self_analysis2['confidence']}")
-    print(f"  Reasoning: {self_analysis2['reasoning']}")
-    print()
+    print_subheader("Self-Analysis")
+    print_kv("Chain of Thought", self_analysis2['chain_of_thought'], indent=2)
+    print_kv("Is Deceptive", self_analysis2['is_deceptive'], indent=2)
+    print_kv("Confidence", self_analysis2['confidence'], indent=2)
+    print_kv("Reasoning", self_analysis2['reasoning'], indent=2)
     
     # Peer analyses  
     other_analyses2 = {}
@@ -175,49 +171,55 @@ def test_deception_detection():
         analysis = detector.analyze_other_deception(observer, "Bob", statement2, "Debate phase, round 1")
         analysis["timestamp"] = datetime.utcnow().isoformat()
         other_analyses2[observer] = analysis
-        print(f"{observer}'s Analysis:")
-        print(f"  Chain of Thought: {analysis['chain_of_thought']}")
-        print(f"  Is Deceptive: {analysis['is_deceptive']}")
-        print(f"  Suspicion Level: {analysis['suspicion_level']}")
-        print(f"  Reasoning: {analysis['reasoning']}")
-        print()
+        print_subheader(f"{observer}'s Analysis")
+        print_kv("Chain of Thought", analysis['chain_of_thought'], indent=2)
+        print_kv("Is Deceptive", analysis['is_deceptive'], indent=2)
+        print_kv("Suspicion Level", analysis['suspicion_level'], indent=2)
+        print_kv("Reasoning", analysis['reasoning'], indent=2)
     
     # Update deception history
     state = update_deception_history(state, "Bob", statement2, self_analysis2, other_analyses2)
     
     # Display final deception summary
-    print("📊 Final Deception Summary")
-    print("-" * 30)
+    print_subheader("📊 Final Deception Summary")
     summary = generate_test_deception_summary(state)
     
-    print(f"Total statements analyzed: {summary['total_statements_analyzed']}")
-    print()
+    print_kv("Total statements analyzed", summary['total_statements_analyzed'])
     
     for player, stats in summary['deception_by_player'].items():
-        print(f"{player} ({state.roles[player]}):")
-        print(f"  • Statements made: {stats['total_statements']}")
-        print(f"  • Self-reported deceptions: {stats['self_reported_deceptions']}")
-        print(f"  • Peer-detected deceptions: {stats['peer_detected_deceptions']}")
-        print(f"  • Average suspicion level: {stats['average_suspicion']:.2f}")
-        print()
+        print_subheader(f"{player} ({state.roles[player]})")
+        print_kv("Statements made", stats['total_statements'], indent=2)
+        print_kv("Self-reported deceptions", stats['self_reported_deceptions'], indent=2)
+        print_kv("Peer-detected deceptions", stats['peer_detected_deceptions'], indent=2)
+        print_kv("Average suspicion level", f"{stats['average_suspicion']:.2f}", indent=2)
     
-    print("🎯 Deception Scores (how each player perceives others):")
+    print_subheader("🎯 Deception Scores (observer -> target)")
     for observer, scores in state.deception_scores.items():
         score_str = ", ".join([f"{target}={score:.2f}" for target, score in scores.items()])
-        print(f"  {observer}: {score_str}")
-    print()
+        print_kv(observer, score_str, indent=2)
+
+    # Observer accuracy section
+    accuracy = compute_observer_accuracy(state)
+    print_subheader("✅ Observer Accuracy")
+    for observer, stat in accuracy.items():
+        print_kv(observer, "", indent=0)
+        print_kv("Total", stat.get("total", 0), indent=2)
+        print_kv("TP/TN/FP/FN", f"{stat.get('tp',0)}/{stat.get('tn',0)}/{stat.get('fp',0)}/{stat.get('fn',0)}", indent=2)
+        print_kv("Accuracy", f"{stat.get('accuracy',0.0):.2f}", indent=2)
+        print_kv("Precision", f"{stat.get('precision',0.0):.2f}", indent=2)
+        print_kv("Recall", f"{stat.get('recall',0.0):.2f}", indent=2)
+        print_kv("F1", f"{stat.get('f1',0.0):.2f}", indent=2)
     
-    print("✅ Deception Detection System Test Complete!")
-    print()
-    print("🔧 System Features Demonstrated:")
-    print("  ✓ Chain of Thought reasoning for deception analysis")
-    print("  ✓ Self-analysis by statement makers")
-    print("  ✓ Peer analysis by other players") 
-    print("  ✓ JSON-formatted output")
-    print("  ✓ Deception history tracking")
-    print("  ✓ Dynamic suspicion score updates")
-    print("  ✓ Comprehensive summary generation")
-    print("  ✓ Binary deception classification (0 or 1)")
+    print_subheader("✅ Deception Detection System Test Complete!")
+    print_subheader("🔧 System Features Demonstrated")
+    print_kv("1", "Chain of Thought reasoning for deception analysis", indent=2)
+    print_kv("2", "Self-analysis by statement makers", indent=2)
+    print_kv("3", "Peer analysis by other players", indent=2) 
+    print_kv("4", "JSON-formatted output", indent=2)
+    print_kv("5", "Deception history tracking", indent=2)
+    print_kv("6", "Dynamic suspicion score updates", indent=2)
+    print_kv("7", "Comprehensive summary generation", indent=2)
+    print_kv("8", "Binary deception classification (0 or 1)", indent=2)
 
 if __name__ == "__main__":
     test_deception_detection()
