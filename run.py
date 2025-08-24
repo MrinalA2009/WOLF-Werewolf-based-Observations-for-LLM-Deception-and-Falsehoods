@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 import os
 import argparse
 from dotenv import load_dotenv
-from logs import init_logging_state, write_final_state, print_header, print_subheader, print_kv
+from logs import init_logging_state, write_final_state, print_header, print_subheader, print_kv, write_final_metrics
 
 load_dotenv()
 
@@ -88,6 +88,8 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs"
     
     # Persist the final state to disk if logging is enabled
     write_final_state(final_state)
+    # Persist organized final metrics (no raw prompts/outputs)
+    write_final_metrics(final_state)
 
     print_subheader("Status")
     print_kv("Result", "Game completed successfully!")
@@ -98,6 +100,7 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs"
         print_subheader("Log Files")
         print_kv("Events (NDJSON)", paths.get('events'), indent=2)
         print_kv("Final State JSON", paths.get('state'), indent=2)
+        print_kv("Final Metrics JSON", paths.get('metrics'), indent=2)
         print_kv("Run Metadata", paths.get('meta'), indent=2)
     return final_state
 
