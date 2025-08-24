@@ -240,3 +240,50 @@ def update_deception_history(state, player_name: str, statement: str,
         "deception_history": new_history,
         "deception_scores": new_scores
     })
+
+
+def compute_observer_accuracy(state) -> Dict[str, Dict[str, float]]:
+    """
+    Compute per-observer accuracy metrics by comparing each observer's prediction
+    against the speaker's self-reported deception label for every statement.
+
+    Returns a mapping of observer -> metrics dict
+    metrics include: tp, tn, fp, fn, total, accuracy, precision, recall, f1
+    """
+    metrics: Dict[str, Dict[str, float]] = {}
+
+    for speaker, history in getattr(state, "deception_history", {}).items():
+        for record in history:
+            true_label = 1 if record.get("self_analysis", {}).get("is_deceptive", 0) == 1 else 0
+            for observer, analysis in record.get("other_analyses", {}).items():
+                pred = 1 if analysis.get("is_deceptive", 0) == 1 else 0
+                stat = metrics.setdefault(observer, {"tp": 0, "tn": 0, "fp": 0, "fn": 0, "total": 0})
+                if pred == 1 and true_label == 1:
+                    stat["tp"] += 1
+                elif pred == 0 and true_label == 0:
+                    stat["tn"] += 1
+                elif pred == 1 and true_label == 0:
+                    stat["fp"] += 1
+                elif pred == 0 and true_label == 1:
+                    stat["fn"] += 1
+                stat["total"] += 1
+
+    # compute rates
+    for observer, stat in metrics.items():
+        total = stat.get("total", 0)
+        tp = stat.get("tp", 0)
+        tn = stat.get("tn", 0)
+        fp = stat.get("fp", 0)
+        fn = stat.get("fn", 0)
+        accuracy = (tp + tn) / total if total else 0.0
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+        stat.update({
+            "accuracy": accuracy,
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+        })
+
+    return metrics
