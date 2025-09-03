@@ -31,7 +31,7 @@ pip install -r requirements.txt
 
 2. **Set up your API key:**
 ```bash
-export GOOGLE_API_KEY="your-api-key-here"
+export LLM_API_KEY="your-api-key-here"
 ```
 
 3. **Run the game:**
@@ -153,4 +153,4 @@ This project is open source. See LICENSE file for details.
 
 ---
 
-**Note**: This game requires an active internet connection and a valid Google Gemini API key to function properly.
+**Note**: This game requires an active internet connection and a valid API key to function properly.
