@@ -2,7 +2,8 @@ import os
 import json
 import threading
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, List
+from statistics import mean
 
 # global lock to ensure concurrent threads don't corrupt log files
 _FILE_LOCK = threading.Lock()
@@ -204,11 +205,11 @@ def compute_final_metrics(state) -> Dict:
     # Cross-perception scores as of the end
     deception_scores = getattr(state, "deception_scores", {}) or {}
 
-    # Accuracy by observer (if available)
+    # Accuracy by observer (if available), import lazily to avoid circular import
     accuracy_by_observer: Dict = {}
     try:
-        if compute_observer_accuracy is not None:
-            accuracy_by_observer = compute_observer_accuracy(state)
+        from deception_detection import compute_observer_accuracy as _compute_observer_accuracy
+        accuracy_by_observer = _compute_observer_accuracy(state)
     except Exception:
         accuracy_by_observer = {}
 

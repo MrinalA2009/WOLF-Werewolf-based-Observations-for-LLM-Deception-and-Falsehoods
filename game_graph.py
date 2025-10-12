@@ -407,11 +407,23 @@ def debate_node(state: GameState, config: RunnableConfig) -> GameState:
     last_speaker = state.debate_log[-1][0] if state.debate_log else None
 
     alive_players = [p for p in state.alive_players if p != last_speaker]
+    # Ensure at least one bidding player; if everyone else is excluded (e.g., single survivor),
+    # allow the last speaker to bid again. If no alive players at all, skip to summarize.
+    if not alive_players:
+        if state.alive_players:
+            alive_players = state.alive_players.copy()
+        else:
+            # No alive players; end the game gracefully
+            state = state.model_copy(update={
+                "phase": "summarize",
+                "step": 0
+            })
+            return state
     bid_logs = []
     bid_dict = {}
 
     # Run bids in parallel
-    with ThreadPoolExecutor(max_workers=len(alive_players)) as executor:
+    with ThreadPoolExecutor(max_workers=max(1, len(alive_players))) as executor:
         futures = {name: executor.submit(get_bid, name, dialogue_history) for name in alive_players}
         for name, future in futures.items():
             bid, raw_output = future.result()
