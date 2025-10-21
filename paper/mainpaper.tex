@@ -6,7 +6,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{hyperref}
-\usepackage{url}
+\usepackage{xurl}
 \usepackage{booktabs}
 \usepackage{amsfonts}
 \usepackage{graphicx}
@@ -21,35 +21,35 @@
 \title{WOLF: Werewolf-based Observations for LLM Deception and Falsehoods}
 
 \author{
-  Saad Rana$^{**}$
+  \textbf{Mrinal Agarwal}\thanks{These authors contributed equally to this work.}
   \and
-  \textbf{Mrinal Agarwal}$^{**}$
+  \textbf{Saad Rana}\footnotemark[1]
   \and
   \textbf{Theo Sundoro}
   \and
   \textbf{Hermela Berhe}
   \and
-  \textbf{Spencer Kim}$^{*}$
+  \textbf{Spencer Kim}\thanks{Advisors.}
   \and
-  \textbf{Vasu Sharma}$^{*}$
+  \textbf{Vasu Sharma}\footnotemark[2]
   \and
-  \textbf{Sean O'Brien}$^{*}$
+  \textbf{Sean O'Brien}\footnotemark[2]
   \and
-  \textbf{Kevin Zhu}$^{\dagger}$
-  \vspace{1em} \\ 
+  \textbf{Kevin Zhu}\footnotemark[2] \\
+  \vspace{1em}
   \textbf{Algoverse AI Research} \\
-  \texttt{sfrana08@gmail.com,smmrinal2009@gmail.com, kevin@algoverse.us} \\
-  \thanks{\protect$^{**}$Equal contribution (Lead Authors) \quad
-          \protect$^{*}$Advisors \quad
-          \protect$^{\dagger}$Program Director}
+  \texttt{smmrinal2009@gmail.com, sfrana08@gmail.com}\\
+  \texttt{2000.seano@gmail.com, kevin@algoverse.us}
 }
+
+
 
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Deception is a fundamental challenge for multi-agent reasoning: effective systems must both conceal information strategically and detect misleading behavior in others. Yet most evaluations reduce deception to static classification, ignoring the interactive, adversarial, and longitudinal nature of real deceptive dynamics \cite{haase2025staticresponsesmultiagentllm}. Large language models (LLMs) can deceive convincingly, yet remain weak at detecting deception in others \cite{curvo2025traitorsdeceptiontrustmultiagent}. We present \textbf{WOLF}, a multi-agent social deduction benchmark based on \emph{Werewolf} that enables separable measurement of deception production and detection. WOLF embeds role-grounded agents (\emph{Villager}, \emph{Werewolf}, \emph{Seer}, \emph{Doctor}) in a programmable LangGraph state machine with strict night--day cycles, debate turns, and majority voting. Every statement is treated as a distinct unit of analysis, with a self-assessment of honesty from the speaker and peer assessments of deceptiveness from all others. Deception is categorized using a standardized taxonomy (\emph{omission}, \emph{distortion}, \emph{fabrication}, \emph{misdirection}), while suspicion scores are aggregated longitudinally via exponential smoothing to capture both immediate judgments and evolving trust dynamics. Structured logs preserve prompts, raw outputs, and state transitions for full reproducibility and analysis. Across \textbf{100 simulated games and 7,230 analyzed statements}, WOLF produces rich interaction traces, per-player deception histories, and cross-perception matrices. Results show that Werewolves generate deceptive statements in \textbf{31\%} of their turns, while peer detection reaches only \textbf{71--73\% precision}, with overall accuracy around \textbf{52\%}. Precision is higher for detecting Werewolves, but there are more false positives against Villagers. Suspicion toward Werewolves rises from about 52\% to over 60\% across rounds, while suspicion toward Villagers and the Doctor stabilizes near 44--46\%. This growing separation demonstrates that extended interaction improves recall against liars without compounding errors against truthful roles. By coupling granular statement-level analysis with round-level suspicion trends, WOLF moves deception evaluation beyond static datasets and provides a controlled yet dynamic testbed for measuring both deceptive capacity and detective capacity in adversarial multi-agent interaction. All code utilized in this project is disclosed at \url{https://anonymous.4open.science/r/DetectionBenchmark-EC25}.
+Deception is a fundamental challenge for multi-agent reasoning: effective systems must both conceal information strategically and detect misleading behavior in others. Yet most evaluations reduce deception to static classification, ignoring the interactive, adversarial, and longitudinal nature of real deceptive dynamics \cite{haase2025staticresponsesmultiagentllm}. Large language models (LLMs) can deceive convincingly, yet remain weak at detecting deception in others \cite{curvo2025traitorsdeceptiontrustmultiagent}. We present \textbf{WOLF}, a multi-agent social deduction benchmark based on \emph{Werewolf} that enables separable measurement of deception production and detection. WOLF embeds role-grounded agents (\emph{Villager}, \emph{Werewolf}, \emph{Seer}, \emph{Doctor}) in a programmable LangGraph state machine with strict night--day cycles, debate turns, and majority voting. Every statement is treated as a distinct unit of analysis, with a self-assessment of honesty from the speaker and peer assessments of deceptiveness from all others. Deception is categorized using a standardized taxonomy (\emph{omission}, \emph{distortion}, \emph{fabrication}, \emph{misdirection}), while suspicion scores are aggregated longitudinally via exponential smoothing to capture both immediate judgments and evolving trust dynamics. Structured logs preserve prompts, raw outputs, and state transitions for full reproducibility and analysis. Across \textbf{100 simulated games and 7,230 analyzed statements}, WOLF produces rich interaction traces, per-player deception histories, and cross-perception matrices. Results show that Werewolves generate deceptive statements in \textbf{31\%} of their turns, while peer detection reaches only \textbf{71--73\% precision}, with overall accuracy around \textbf{52\%}. Precision is higher for detecting Werewolves, but there are more false positives against Villagers. Suspicion toward Werewolves rises from about 52\% to over 60\% across rounds, while suspicion toward Villagers and the Doctor stabilizes near 44--46\%. This growing separation demonstrates that extended interaction improves recall against liars without compounding errors against truthful roles. By coupling granular statement-level analysis with round-level suspicion trends, WOLF moves deception evaluation beyond static datasets and provides a controlled yet dynamic testbed for measuring both deceptive capacity and detective capacity in adversarial multi-agent interaction. All code utilized in this project is disclosed at \url{https://github.com/MrinalA2009/WOLF-Werewolf-based-Observations-for-LLM-Deception-and-Falsehoods}.
 \end{abstract}
 
 \section{Introduction}
@@ -109,7 +109,7 @@ Because suspicion is rarely static, we model its longitudinal dynamics with expo
 \[
 D_{t+1}(o,t) = \alpha \cdot s(o,t) + (1-\alpha)\cdot D_{t}(o,t), \quad \alpha=0.7,
 \]
-Here, $s(o,t)$ denotes the observer’s current suspicion for the new statement, and $D_t(o,t)$ represents their suspicion aggregated from all prior statements. The smoothing factor $\alpha = 0.7$ ensures that new evidence carries significant weight, while prior history tempers overreaction. This mirrors human-like reasoning: a single suspicious comment may raise doubts, but trust or distrust stabilizes only after repeated patterns. The protocol therefore, yields suspicion trajectories that capture both immediate reactions and cumulative judgment.
+Here, $s(o,t)$ denotes the observer’s current suspicion for the new statement, and $D_t(o,t)$ represents their suspicion aggregated from all prior statements. The smoothing factor $\alpha = 0.7$ ensures that new evidence carries significant weight, while prior history tempers overreaction. This mirrors human-like reasoning: a single suspicious comment may raise doubts, but trust or distrust stabilizes only after repeated patterns. The protocol therefore yields suspicion trajectories that capture both immediate reactions and cumulative judgment.
 
 \subsection{Statement Analysis}
 
@@ -207,7 +207,7 @@ Doctor   &  39 &  27 & 60.8\% & 60.5\% \\
 \bottomrule
 \end{tabular}
 \end{table}
-Werewolves attract more suspicion (53.3\%) and are flagged more often (60.1\%) than Villagers (48--50\%), suggesting peers can partially distinguish deceptive roles.Yet high suspicion also extends to the Seer and Doctor, despite their trusted roles. This arises because their strategies often involve withholding or hedging: the Seer delays revealing results until enough evidence accumulates, and the Doctor frequently acts without public proof of success. Event-conditioned analysis confirms this. Suspicion of the Seer is higher before revealing information (57.2\%) but drops afterward (48.5\%). Similarly, the Doctor is judged more suspicious when protections fail (62.1\%) compared to when they succeed (54.3\%). These patterns show how role incentives, not just outright lying, can inflate suspicion and reduce group accuracy. Frequent self-reports (over two-thirds of statements) further raise the difficulty as Villagers in particular admit to hedging or cautious omissions, which peers then misinterpret as deception.This asymmetry shows that deceptive roles are not fully hidden, but honest roles are still penalized, lowering group accuracy.
+Werewolves attract more suspicion (53.3\%) and are flagged more often (60.1\%) than Villagers (48--50\%), suggesting peers can partially distinguish deceptive roles. Yet high suspicion also extends to the Seer and Doctor, despite their trusted roles. This arises because their strategies often involve withholding or hedging: the Seer delays revealing results until enough evidence accumulates, and the Doctor frequently acts without public proof of success. Event-conditioned analysis confirms this. Suspicion of the Seer is higher before revealing information (57.2\%) but drops afterward (48.5\%). Similarly, the Doctor is judged more suspicious when protections fail (62.1\%) compared to when they succeed (54.3\%). These patterns show how role incentives, not just outright lying, can inflate suspicion and reduce group accuracy. Frequent self-reports (over two-thirds of statements) further raise the difficulty as Villagers in particular admit to hedging or cautious omissions, which peers then misinterpret as deception.This asymmetry shows that deceptive roles are not fully hidden, but honest roles are still penalized, lowering group accuracy.
 
 \subsection{Cross-Perception Matrix}
 We aggregate observer perceptions at the end of the game into a role-based suspicion matrix $D$, where each entry $D[o,t]\in[0,1]$ is observer $o$’s average suspicion of target $t$.
