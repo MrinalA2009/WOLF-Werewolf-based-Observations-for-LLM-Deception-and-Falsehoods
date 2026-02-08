@@ -39,6 +39,16 @@ AVAILABLE_MODELS = {
         "temperature": 0.7,
         "max_tokens": None,
         "provider": "google"
+    },
+
+    # --- Local Models (served via vLLM) ---
+    "meta-llama/Meta-Llama-3-8B-Instruct": {
+        "name": "meta-llama/Meta-Llama-3-8B-Instruct",
+        "description": "Meta Llama 3 8B Instruct - local via vLLM",
+        "temperature": 0.7,
+        "max_tokens": None,
+        "provider": "local-vllm",
+        "base_url": "http://localhost:8000/v1"
     }
 }
 

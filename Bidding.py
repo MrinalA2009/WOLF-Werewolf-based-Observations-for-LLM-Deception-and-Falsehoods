@@ -8,7 +8,11 @@ def get_llm():
     global _llm
     if _llm is None:
         model_name = os.environ.get("MODEL_NAME", "gpt-4o")
-        _llm = ChatOpenAI(model=model_name, temperature=0.7)
+        base_url = os.environ.get("VLLM_BASE_URL")
+        kwargs = {"model": model_name, "temperature": 0.7}
+        if base_url:
+            kwargs["base_url"] = base_url
+        _llm = ChatOpenAI(**kwargs)
     return _llm
 
 def get_bid(player_name: str, dialogue_history: str):

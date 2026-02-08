@@ -68,7 +68,7 @@ class GameState(BaseModel):
     phase: Literal[
         "eliminate", "protect", "unmask", "resolve_night",
         "check_winner_night", "debate", "vote", "exile",
-        "check_winner_day", "summarize"
+        "check_winner_day", "summarize", "end"
     ] = "eliminate"
     step: int = 0 
 
@@ -231,6 +231,13 @@ def _compute_current_winner(state: GameState) -> Optional[Literal["Villagers", "
     return None
 def eliminate_node(state: GameState, config: RunnableConfig) -> GameState:
     player_objects = config.get("configurable", {}).get("player_objects", {})
+    # Reset night-phase fields so stale values from prior rounds don't persist
+    state = state.model_copy(update={
+        "eliminated": None,
+        "protected": None,
+        "unmasked": None,
+        "round_num": state.round_num + 1,
+    })
     # Early terminal check: if a winner is already determined, end now
     immediate_winner = _compute_current_winner(state)
     if immediate_winner:
@@ -296,9 +303,9 @@ def protect_node(state: GameState, config: RunnableConfig) -> GameState:
     player_objects = config.get("configurable", {}).get("player_objects", {})
     doctor_name = state.doctor
 
-    # check if doctor was killed 
+    # check if doctor was killed
     if doctor_name not in state.alive_players:
-        return state.model_copy(update={"phase": "unmask"})
+        return state.model_copy(update={"protected": None, "phase": "unmask"})
 
     protect_target, log = player_objects[doctor_name].save(state.alive_players)
 

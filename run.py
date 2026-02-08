@@ -11,27 +11,40 @@ load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 
 
-def get_llm(model_name="gpt-4o", api_key=None):
+def get_llm(model_name="gpt-4o", api_key=None, base_url=None):
     """Initialize the language model with configurable parameters."""
+    os.environ["MODEL_NAME"] = model_name
+
+    if base_url:
+        os.environ["VLLM_BASE_URL"] = base_url
+        if not os.environ.get("OPENAI_API_KEY"):
+            os.environ["OPENAI_API_KEY"] = "EMPTY"
+        return ChatOpenAI(
+            model=model_name,
+            temperature=0.7,
+            base_url=base_url,
+        )
+
     if api_key:
         os.environ["OPENAI_API_KEY"] = api_key
     elif not os.environ.get("OPENAI_API_KEY"):
         raise ValueError("OPENAI_API_KEY environment variable not set and no API key provided")
-    os.environ["MODEL_NAME"] = model_name
-    
+
     return ChatOpenAI(
         model=model_name,
         temperature=0.7
     )
 
 
-def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs", enable_file_logging: bool = True):
+def run_werewolf_game(model_name="gpt-4o", api_key=None, base_url=None, log_dir: str = "./logs", enable_file_logging: bool = True):
     """Run a werewolf game with the specified model."""
     print_header("Starting Werewolf Game")
     print_kv("Model", model_name)
-    
+    if base_url:
+        print_kv("Base URL", base_url)
+
     # Initialize the language model
-    llm = get_llm(model_name, api_key)
+    llm = get_llm(model_name, api_key, base_url=base_url)
     
     # Game setup
     players = ["Alice", "Bob", "Selena", "Raj", "Frank", "Joy", "Cyrus", "Emma"]
@@ -117,6 +130,11 @@ if __name__ == "__main__":
         help="OpenAI API key (alternatively set OPENAI_API_KEY environment variable)"
     )
     parser.add_argument(
+        "--base-url",
+        default=None,
+        help="Base URL for OpenAI-compatible API (e.g. http://localhost:8000/v1 for vLLM)"
+    )
+    parser.add_argument(
         "--log-dir",
         default="./logs",
         help="Directory to store run logs (events NDJSON + final JSON). Default: ./logs"
@@ -131,7 +149,7 @@ if __name__ == "__main__":
     
     try:
         # If no API key provided via args, rely on environment variables loaded from .env
-        final_state = run_werewolf_game(args.model, args.api_key, log_dir=args.log_dir, enable_file_logging=(not args.no_file_logging))
+        final_state = run_werewolf_game(args.model, args.api_key, base_url=args.base_url, log_dir=args.log_dir, enable_file_logging=(not args.no_file_logging))
 
         print_subheader("Game Results")
         print_kv("Final alive players", final_state.alive_players, indent=2)
