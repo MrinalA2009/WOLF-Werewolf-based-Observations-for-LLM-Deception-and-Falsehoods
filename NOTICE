@@ -1,0 +1,9 @@
+WOLF: Werewolf-based Observations for LLM Deception and Falsehoods
+Copyright 2025 Mrinal Agarwal, Saad Rana, and the WOLF authors
+
+This product includes software derived from Werewolf Arena
+(https://github.com/google/werewolf_arena), Copyright 2024 Google LLC,
+licensed under the Apache License, Version 2.0.
+
+The game loop was re-implemented on top of LangChain / LangGraph and extended
+with per-statement deception instrumentation; see docs/methodology.md.

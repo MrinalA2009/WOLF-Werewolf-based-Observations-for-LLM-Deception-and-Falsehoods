@@ -16,15 +16,19 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Logs and local data
+# Run output
+/logs/
+game_log.json
 werewolf_game_log.json
 *.log
-logs/
 
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints
+# Test / tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
 
-# VSCode / IDE settings
+# Editors
 .vscode/
 .idea/
 
@@ -33,14 +37,8 @@ logs/
 *.egg-info/
 dist/
 build/
-*.manifest
-*.spec
 
 # Local runtime files
 *.pid
 *.cache
 *.db
-
-#api
-.env
-
