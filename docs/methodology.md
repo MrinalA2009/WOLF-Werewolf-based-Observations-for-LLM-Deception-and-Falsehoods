@@ -4,7 +4,7 @@ This document explains how the game works end‑to‑end, including phases, AI b
 
 #### Core Data Model
 
-- `GameState` (see `game_graph.py`): single source of truth containing:
+- `GameState` (see `wolf/game/graph.py`): single source of truth containing:
   - Players, roles, alive lists, special roles (Seer, Doctor, Werewolves, Villagers)
   - Turn/round counters: `round_num`, `step`, and `phase`
   - Action logs and summaries: bids, votes, debate log, summaries
@@ -29,21 +29,21 @@ This document explains how the game works end‑to‑end, including phases, AI b
 
 Each phase is a node in a LangGraph `StateGraph`. Transitions are deterministic based on game rules and the evolving `GameState`.
 
-#### AI Players (`player.py`)
+#### AI Players (`wolf/agents/player.py`)
 
 - Each player is a `Player` with `role`, `scratchpad`, and a shared `llm`.
 - Action methods: `eliminate`, `save`, `unmask` construct a role‑aware JSON prompt and call `call_model`.
 - `call_model` returns parsed JSON and also includes the exact `_prompt` and `_raw_response` for auditability.
 - Post‑validation ensures targets are valid; fallbacks are applied when the model returns invalid data, and this is recorded in logs.
 
-#### Deception Detection (`deception_detection.py`)
+#### Deception Detection (`wolf/deception/`)
 
 - `DeceptionDetector` asks the active speaker to self‑assess deception and asks all peers to analyze the statement.
 - Peer analyses run concurrently via a thread pool.
 - Results are normalized and stored in `deception_history` and aggregated into `deception_scores` via a weighted update.
 - A per‑round deception summary is produced at the end of the game.
 
-#### Bidding and Debate (`Bidding.py` and `game_graph.py`)
+#### Bidding and Debate (`wolf/game/bidding.py` and `wolf/game/graph.py`)
 
 - Players bid for speaking order/priority using `get_bid`.
 - `choose_next_speaker` resolves the next speaker.
@@ -58,7 +58,7 @@ Each phase is a node in a LangGraph `StateGraph`. Transitions are deterministic 
   - Werewolves eliminated => Villagers win
   - Werewolves >= Villagers => Werewolves win
 
-#### Logging (`logs.py`)
+#### Logging (`wolf/runlog/`)
 
 - Every state transition or action appends a structured event via `log_event`.
 - Events are streamed to `logs/<run_id>/events.ndjson` with concurrency safety.
@@ -75,4 +75,4 @@ Each phase is a node in a LangGraph `StateGraph`. Transitions are deterministic 
 
 - Add new phases by extending `GameState.phase` literals and adding nodes to `StateGraph`.
 - Use `log_event` for any new actions; include both `inputs` and `outputs` fields.
-- Register additional per‑run artifacts by updating `init_logging_state` in `logs.py`.
+- Register additional per‑run artifacts by updating `init_logging_state` in `wolf/runlog/`.

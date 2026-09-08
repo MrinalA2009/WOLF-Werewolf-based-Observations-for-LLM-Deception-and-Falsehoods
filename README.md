@@ -1,156 +1,95 @@
-# Werewolf Game
+# WOLF — Werewolf-based Observations for LLM Deception and Falsehoods
 
-## Game Overview
+WOLF runs games of Werewolf where every player is an LLM agent, and instruments
+every statement so you can measure two things separately:
 
-This is a multiplayer social deduction game where:
-- **Villagers** try to identify and eliminate the Werewolves
-- **Werewolves** try to blend in and eliminate Villagers  
-- **Seer** can investigate one player each night to learn their role
-- **Doctor** can protect one player each night from elimination
+- **deception production** — how often, and in what form, a player lies
+- **deception detection** — how well the other players catch it
 
-The game includes sophisticated deception detection that analyzes player statements and voting patterns to determine trustworthiness.
+Each debate line gets a self-honesty label from the speaker and a suspicion
+judgment from every other living player, categorised as *omission*, *distortion*,
+*fabrication*, or *misdirection*. Suspicion is smoothed across the game so you can
+watch trust move round to round. Full prompts, raw model output, and state
+transitions are written to disk for every run.
 
-##  Quick Start
+The engine is a LangGraph state machine with strict night/day cycles, bid-ordered
+debate, and majority-vote exile. It is derived from Google's
+[Werewolf Arena](https://github.com/google/werewolf_arena) (Apache-2.0); see
+`NOTICE`.
 
-See also: `LOGGING.md` and `METHODOLOGY.md` for detailed logging and methodology docs.
+## Layout
 
-### Prerequisites
-- Python 3.8+
-- Google Gemini API key
+```
+wolf/
+  cli.py            entry point (also exposed as the `wolf` command)
+  config.py         model list and defaults
+  game/
+    state.py        GameState — the single source of truth
+    graph.py        phase nodes + the StateGraph wiring
+    bidding.py      debate turn order
+  agents/
+    player.py       role prompts + per-action LLM calls
+  deception/
+    detector.py     self / peer chain-of-thought reads
+    scoring.py      suspicion smoothing, observer accuracy
+    analysis.py     orchestrates a full statement analysis
+  runlog/
+    events.py       per-run log setup + NDJSON event stream
+    metrics.py      research-ready metrics JSON
+    console.py      terminal report helpers
+docs/               methodology.md, logging.md
+tests/              scripted-LLM suite (no API key needed)
+```
 
-### Installation
+## Setup
 
-1. **Clone and setup the environment:**
+Needs Python 3.9+ and an OpenAI API key.
+
 ```bash
-git clone <repository-url>
-cd ai-werewolf-game
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .
+export OPENAI_API_KEY=sk-...        # or put it in a .env file
 ```
 
-2. **Set up your API key:**
+## Run
+
 ```bash
-export LLM_API_KEY="your-api-key-here"
+python run.py                       # or: wolf
+python run.py --model gpt-4o-mini
+python run.py --log-dir ./runs
+python run.py --no-file-logging
 ```
 
-3. **Run the game:**
+The roster (8 players: 2 Werewolves, 1 Seer, 1 Doctor, 4 Villagers) and the
+6-turn debate cap are set in `wolf/cli.py`.
+
+## Output
+
+Each run writes `logs/<run_id>/`:
+
+| file | contents |
+|---|---|
+| `events.ndjson` | one JSON event per line, in order, with `_prompt` / `_raw_response` |
+| `game_state.json` | the full final `GameState` |
+| `run_meta.json` | roster, roles, model, timestamps |
+| `final_metrics.json` | research metrics, no raw prompts — **but see KNOWN_ISSUES.md #1** |
+
+`docs/logging.md` has `jq` recipes for slicing these.
+
+## Development
+
 ```bash
-python run.py
+pip install -e ".[dev]"
+pytest        # scripted games + scoring unit tests, no network
+ruff check .
 ```
 
-### Game Features
+`tests/test_refactor_parity.py` pins a scripted full game to a byte-exact golden
+snapshot; regenerate it with `python -m tests.regen_golden` only when you mean to
+change game output.
 
-- **Dynamic AI Players**: Each player has their own personality and strategy
-- **Advanced Deception Detection**: Real-time analysis of player statements for deception
-- **Sophisticated Dialogue**: Natural conversation flow with context awareness
-- **Role-Based Actions**: Seer investigation, Doctor protection, Werewolf elimination
-- **Voting System**: Democratic exile voting with deception analysis
-- **Game State Tracking**: Comprehensive logging of all game events
+## Status
 
-## Project Structure
-
-```
-ai-werewolf-game/
-├── run.py                 # Main game entry point
-├── game_graph.py          # Game logic and state machine
-├── player.py              # Player class with AI behavior
-├── deception_detection.py # Deception analysis system
-├── Bidding.py            # Bidding mechanics
-├── config.py             # Game configuration
-├── requirements.txt      # Python dependencies
-└── README.md            # This file
-```
-
-## How to Play
-
-### Game Flow
-
-1. **Night Phase**:
-   - Werewolves choose a player to eliminate
-   - Doctor chooses a player to protect
-   - Seer investigates a player's role
-
-2. **Day Phase**:
-   - Players debate and discuss suspicions
-   - Deception detection analyzes statements
-   - Players vote to exile someone
-   - Winner is determined
-
-### Player Roles
-
-- **Villager**: Basic role, tries to identify werewolves
-- **Werewolf**: Tries to eliminate villagers without being caught
-- **Seer**: Can investigate one player per night to learn their role
-- **Doctor**: Can protect one player per night from elimination
-
-## 🔍 Deception Detection
-
-The game includes a sophisticated deception detection system that:
-
-- **Self-Analysis**: Players analyze their own statements for deceptive intent
-- **Peer Analysis**: Other players analyze each statement for deception
-- **Historical Tracking**: Maintains deception history for each player
-- **Confidence Scoring**: Provides confidence levels for deception assessments
-
-## Configuration
-
-Edit `config.py` to customize:
-- Number of players
-- Role distribution
-- Game parameters
-- Debug settings
-
-## Troubleshooting
-
-### Common Issues
-
-1. **API Rate Limits (429 Error)**
-   - **Cause**: Free tier Gemini API has rate limits
-   - **Solution**: Wait a few minutes or upgrade to paid tier
-   - **Workaround**: Use `--model gemini-pro` for different rate limits
-
-2. **Missing API Key**
-   - **Solution**: Set `GOOGLE_API_KEY` environment variable
-   - **Alternative**: Use embedded test key (limited functionality)
-
-3. **Import Errors**
-   - **Solution**: Ensure all dependencies are installed: `pip install -r requirements.txt`
-   - **Check**: Verify Python version is 3.8+
-
-### Debug Mode
-
-Enable debug mode in `config.py`:
-```python
-"debug_mode": True
-```
-
-## Game Logs
-
-The game generates comprehensive logs. See `LOGGING.md` for full details.
-- Events (NDJSON): One JSON event per line streamed during the run
-- Final State JSON: Complete final game state with `game_logs`
-- Console output: Real-time game events
-- Deception analysis: Detailed deception assessments
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is open source. See LICENSE file for details.
-
-## Acknowledgments
-
-- Built with LangChain and LangGraph
-- Powered by Google Gemini AI
-- Inspired by the classic Werewolf/Mafia party game
-
----
-
-**Note**: This game requires an active internet connection and a valid API key to function properly.
+The code works but has several known, deliberately-unfixed bugs (final-metrics
+crash, `round_num` never incrementing, others) — see `KNOWN_ISSUES.md`.
+`docs/methodology.md` explains the engine end to end.

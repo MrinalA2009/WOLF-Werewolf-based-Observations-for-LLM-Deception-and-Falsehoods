@@ -1,8 +1,15 @@
-import random
-from langchain_openai import ChatOpenAI
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2025 Mrinal Agarwal, Saad Rana, and the WOLF authors
+
 import os
-# ChatGpt model setup - initialize lazily
+import random
+
+from langchain_openai import ChatOpenAI
+
+# Bidding runs its own client keyed off MODEL_NAME (set by wolf.cli.get_llm)
+# rather than taking the game's llm object. Built once, on first bid.
 _llm = None
+
 
 def get_llm():
     global _llm
@@ -34,22 +41,24 @@ Only respond with the number. Do not explain.
         bid = int(response)
         bid = max(0, min(10, bid))
     except ValueError:
-        bid = 0  # Safe fallback
+        # A non-numeric reply means "I have nothing to add."
+        bid = 0
 
     return bid, response
+
+
 def get_max_bids(bid_dict):
     max_value = max(bid_dict.values())
     return [name for name, bid in bid_dict.items() if bid == max_value]
 
+
 def choose_next_speaker(bid_dict, previous_dialogue=None):
-    """
-    Given a dictionary of player bids, returns the chosen speaker using:
-    - Max bid
-    - Mention bias from previous dialogue
-    - Random tiebreaking
-    """
+    """Pick who speaks next: highest bidders, nudged toward anyone recently
+    named, then a coin flip among what's left."""
     top_bidders = get_max_bids(bid_dict)
 
+    # NOTE: this scans top_bidders against itself, so the mention nudge is a
+    # no-op today. Behaviour preserved on purpose — see KNOWN_ISSUES.md #4.
     if previous_dialogue:
         top_bidders += [name for name in top_bidders if name in previous_dialogue]
 
