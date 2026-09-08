@@ -1,219 +1,25 @@
-# Note this a refactored version of a file Obtained copyright license from Google LLC, Apache License. 
-# It utilizes similar game style-play but implements a different network and data system via Lang-Chain to ease manual rooting. 
-# Copyright 2025 *tbd name*
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2025 Mrinal Agarwal, Saad Rana, and the WOLF authors
+#
+# The night/day loop and role set are derived from Google's Werewolf Arena
+# (Apache-2.0). WOLF swaps its own LangGraph state machine and deception
+# instrumentation in around that shape; see NOTICE and docs/methodology.md.
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Literal
+from typing import Optional, Literal
 from langchain_core.runnables import RunnableConfig
-import random, tqdm, json, os
+import random
+import tqdm
 from langgraph.graph import StateGraph, END
 from collections import Counter
-from Bidding import get_bid, choose_next_speaker
 from concurrent.futures import ThreadPoolExecutor
-from logs import log_event, print_header, print_subheader, print_kv, print_list, print_matrix
-from deception_detection import DeceptionDetector, update_deception_history, compute_observer_accuracy
-from datetime import datetime
 
-class GameState(BaseModel):
-    round_num: int = 0
-    players: List[str] = []  # all players
-    alive_players: List[str] = []  # updated after each night/day
-    villagers: List[str] = []
-    werewolves: List[str] = []
-    seer: Optional[str] = None
-    doctor: Optional[str] = None
-    roles: Dict[str, str] = {}  # {name: role}
+from wolf.game.state import GameState
+from wolf.game.bidding import get_bid, choose_next_speaker
+from wolf.deception.analysis import analyze_statement_deception, generate_deception_summary
+from wolf.deception.scoring import compute_observer_accuracy
+from wolf.runlog.events import log_event
+from wolf.runlog.console import print_header, print_subheader, print_kv, print_matrix
 
-    # Logs
-    eliminated: Optional[str] = None
-    protected: Optional[str] = None
-    unmasked: Optional[str] = None
-    exiled: Optional[str] = None
-    votes: Dict[str, str] = {}  # voter: target
-    bids: List[Dict[str, int]] = []  # list per turn
-    debate_log: List[List[str]] = []  # [[speaker, dialogue]]
-    summaries: List[str] = []
-
-    # Logs from LLM responses
-    vote_logs: List[str] = []
-    bid_logs: List[str] = []
-    summary_logs: List[str] = []
-    protect_log: Optional[str] = None
-    eliminate_log: Optional[str] = None
-    unmask_log: Optional[str] = None
-
-    # Game logs 
-    game_logs: List[Dict] = Field(default_factory=list)
-
-    # Deception tracking
-    deception_history: Dict[str, List[Dict]] = Field(default_factory=dict)  # {player: [deception_records]}
-    deception_scores: Dict[str, Dict[str, float]] = Field(default_factory=dict)  # {observer: {target: score}}
-    # New: per-iteration summaries for quick inspection and export
-    deception_iterations: List[Dict] = Field(default_factory=list)
-    current_speaker: Optional[str] = None
-    winner: Optional[Literal["Villagers", "Werewolves"]] = None
-
-    phase: Literal[
-        "eliminate", "protect", "unmask", "resolve_night",
-        "check_winner_night", "debate", "vote", "exile",
-        "check_winner_day", "summarize"
-    ] = "eliminate"
-    step: int = 0 
-
-    # File logging configuration (optional)
-    log_dir: Optional[str] = None
-    log_run_id: Optional[str] = None
-    log_paths: Dict[str, str] = Field(default_factory=dict)
-
-def analyze_statement_deception(state: GameState, speaker_name: str, statement: str, 
-                               player_objects: Dict, config: RunnableConfig) -> GameState:
-    """
-    Analyze a statement for deception using self-analysis and peer analysis.
-    """
-    # Initialize deception detector 
-    detector = DeceptionDetector(player_objects[speaker_name].llm)
-    
-    context = f"Round {state.round_num}, Phase: {state.phase}. Alive players: {', '.join(state.alive_players)}."
-    if state.debate_log:
-        recent_dialogue = state.debate_log[-3:]  # Last 3 statements for context
-        context += f" Recent dialogue: {'; '.join([f'{s}: {d}' for s, d in recent_dialogue])}"
-    
-    # Ask  speaker to analyze their own statement
-    self_analysis = detector.analyze_self_deception(speaker_name, statement, context)
-    
-    # Ask all other alive players to analyze the statement
-    other_players = [p for p in state.alive_players if p != speaker_name]
-    other_analyses = {}
-    
-    # Run analyses in parallel
-    with ThreadPoolExecutor(max_workers=max(1, len(other_players))) as executor:
-        futures = {}
-        for observer in other_players:
-            # Get observer's history 
-            speaker_history = state.deception_history.get(speaker_name, [])
-            futures[observer] = executor.submit(
-                detector.analyze_other_deception,
-                observer, speaker_name, statement, context, speaker_history
-            )
-        
-        for observer, future in futures.items():
-            try:
-                analysis = future.result()
-                analysis["timestamp"] = datetime.utcnow().isoformat()
-                other_analyses[observer] = analysis
-            except Exception as e:
-                # Fallback 
-                other_analyses[observer] = {
-                    "chain_of_thought": f"Analysis failed: {str(e)}",
-                    "is_deceptive": 0,
-                    "confidence": 0.0,
-                    "deception_type": "none",
-                    "reasoning": "Analysis error",
-                    "suspicion_level": 0.5,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-    
-    # Update rich history and scores
-    state = update_deception_history(state, speaker_name, statement, self_analysis, other_analyses)
-
-    # Compute iteration-level summary metrics
-    observer_count = len(other_analyses)
-    observer_deceptive_count = sum(1 for a in other_analyses.values() if a.get("is_deceptive", 0) == 1)
-    suspicion_levels = {name: a.get("suspicion_level", 0.5) for name, a in other_analyses.items()}
-    avg_suspicion = (sum(suspicion_levels.values()) / observer_count) if observer_count else 0.0
-
-    iteration_record = {
-        "round": state.round_num,
-        "phase": state.phase,
-        "step": state.step,
-        "speaker": speaker_name,
-        "statement": statement,
-        "self_analysis": self_analysis,
-        "other_analyses": other_analyses,
-        "observer_count": observer_count,
-        "observer_deceptive_count": observer_deceptive_count,
-        "observer_deceptive_fraction": (observer_deceptive_count / observer_count) if observer_count else 0.0,
-        "suspicion_levels": suspicion_levels,
-        "average_suspicion": avg_suspicion,
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-
-    state = state.model_copy(update={
-        "deception_iterations": state.deception_iterations + [iteration_record]
-    })
-    
-    state = log_event(state, "deception_analysis", speaker_name, {
-        "statement": statement,
-        "self_analysis": self_analysis,
-        "other_analyses": other_analyses,
-        "observer_count": observer_count,
-        "observer_deceptive_count": observer_deceptive_count,
-        "observer_deceptive_fraction": (observer_deceptive_count / observer_count) if observer_count else 0.0,
-        "average_suspicion": avg_suspicion,
-    })
-    
-    # Print summary 
-    deception_count = sum(1 for analysis in other_analyses.values() if analysis.get("is_deceptive", 0) == 1)
-    tqdm.tqdm.write(f"   Deception Analysis: {deception_count}/{len(other_analyses)} observers think it's deceptive")
-    
-    return state
-def generate_deception_summary(state: GameState) -> Dict:
-    """
-    Generate a summary of deception patterns and perceptions throughout the game.
-    """
-    summary = {
-        "total_statements_analyzed": 0,
-        "deception_by_player": {},
-        "final_deception_scores": state.deception_scores,
-        "deception_patterns": {}
-    }
-    
-    # Analyze deception history
-    for player, history in state.deception_history.items():
-        player_summary = {
-            "total_statements": len(history),
-            "self_reported_deceptions": 0,
-            "peer_detected_deceptions": 0,
-            "average_suspicion": 0.0
-        }
-        
-        total_suspicion = 0
-        suspicion_count = 0
-        
-        for record in history:
-            # Count self-reported deceptions
-            if record["self_analysis"].get("is_deceptive", 0) == 1:
-                player_summary["self_reported_deceptions"] += 1
-            
-            # Count peer-detected deceptions
-            for peer_analysis in record["other_analyses"].values():
-                if peer_analysis.get("is_deceptive", 0) == 1:
-                    player_summary["peer_detected_deceptions"] += 1
-                
-                # Track suspicion levels
-                suspicion = peer_analysis.get("suspicion_level", 0.5)
-                total_suspicion += suspicion
-                suspicion_count += 1
-        
-        if suspicion_count > 0:
-            player_summary["average_suspicion"] = total_suspicion / suspicion_count
-            
-        summary["deception_by_player"][player] = player_summary
-        summary["total_statements_analyzed"] += len(history)
-    
-    return summary
 def _compute_current_winner(state: GameState) -> Optional[Literal["Villagers", "Werewolves"]]:
     """Compute winner based on current alive players.
 
