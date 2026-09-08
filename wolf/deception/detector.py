@@ -52,31 +52,29 @@ No extra text, no markdown, no code fences.
 
         raw_text = self.llm.invoke(prompt, max_tokens=300, timeout=10).content.strip()
         try:
-            result = json.loads(raw_text)
-            # required fields and validate types
-            result.setdefault("chain_of_thought", "")
-            result.setdefault("is_deceptive", 0)
-            result.setdefault("confidence", 0.5)
-            result.setdefault("deception_type", "none")
-            result.setdefault("reasoning", "")
+            parsed = json.loads(raw_text)
+            parsed.setdefault("chain_of_thought", "")
+            parsed.setdefault("is_deceptive", 0)
+            parsed.setdefault("confidence", 0.5)
+            parsed.setdefault("deception_type", "none")
+            parsed.setdefault("reasoning", "")
 
-            # Validate and normalize values
-            result["is_deceptive"] = 1 if result["is_deceptive"] else 0
-            result["confidence"] = max(0.0, min(1.0, float(result["confidence"])))
+            parsed["is_deceptive"] = 1 if parsed["is_deceptive"] else 0
+            parsed["confidence"] = max(0.0, min(1.0, float(parsed["confidence"])))
 
         except (json.JSONDecodeError, ValueError, KeyError) as e:
-            # Fallback
-            result = {
+            parsed = {
                 "chain_of_thought": f"Failed to parse response: {raw_text}",
                 "is_deceptive": 0,
                 "confidence": 0.0,
                 "deception_type": "none",
                 "reasoning": f"JSON parsing error: {str(e)}",
             }
-        # needa always include raw response and prompt for logging
-        result.setdefault("_raw_response", raw_text)
-        result.setdefault("_prompt", prompt)
-        return result
+        # Keep the exact prompt and reply on every record so a run is auditable
+        # offline without re-calling the model.
+        parsed.setdefault("_raw_response", raw_text)
+        parsed.setdefault("_prompt", prompt)
+        return parsed
 
     def analyze_other_deception(self, observer_name: str, speaker_name: str, statement: str,
                               context: str = "", history: List[Dict] = None) -> Dict:
@@ -95,11 +93,11 @@ No extra text, no markdown, no code fences.
         """
         history_text = ""
         if history:
-            recent_history = history[-3:]
+            recent = history[-3:]
             history_items = []
-            for h in recent_history:
-                deceptive = "deceptive" if h.get("is_deceptive", 0) == 1 else "truthful"
-                history_items.append(f"- {h.get('statement', 'Unknown')}: classified as {deceptive}")
+            for record in recent:
+                deceptive = "deceptive" if record.get("is_deceptive", 0) == 1 else "truthful"
+                history_items.append(f"- {record.get('statement', 'Unknown')}: classified as {deceptive}")
             history_text = f"\nPrevious statements from {speaker_name}:\n" + "\n".join(history_items)
 
         prompt = f"""
@@ -130,23 +128,20 @@ No extra text, no markdown, no code fences.
 
         raw_text = self.llm.invoke(prompt, max_tokens=300, timeout=10).content.strip()
         try:
-            result = json.loads(raw_text)
-            # required fields and validate types
-            result.setdefault("chain_of_thought", "")
-            result.setdefault("is_deceptive", 0)
-            result.setdefault("confidence", 0.5)
-            result.setdefault("deception_type", "none")
-            result.setdefault("reasoning", "")
-            result.setdefault("suspicion_level", 0.5)
+            parsed = json.loads(raw_text)
+            parsed.setdefault("chain_of_thought", "")
+            parsed.setdefault("is_deceptive", 0)
+            parsed.setdefault("confidence", 0.5)
+            parsed.setdefault("deception_type", "none")
+            parsed.setdefault("reasoning", "")
+            parsed.setdefault("suspicion_level", 0.5)
 
-            # Validate and normalize values
-            result["is_deceptive"] = 1 if result["is_deceptive"] else 0
-            result["confidence"] = max(0.0, min(1.0, float(result["confidence"])))
-            result["suspicion_level"] = max(0.0, min(1.0, float(result["suspicion_level"])))
+            parsed["is_deceptive"] = 1 if parsed["is_deceptive"] else 0
+            parsed["confidence"] = max(0.0, min(1.0, float(parsed["confidence"])))
+            parsed["suspicion_level"] = max(0.0, min(1.0, float(parsed["suspicion_level"])))
 
         except (json.JSONDecodeError, ValueError, KeyError) as e:
-            # Fallback
-            result = {
+            parsed = {
                 "chain_of_thought": f"Failed to parse response: {raw_text}",
                 "is_deceptive": 0,
                 "confidence": 0.0,
@@ -154,7 +149,6 @@ No extra text, no markdown, no code fences.
                 "reasoning": f"JSON parsing error: {str(e)}",
                 "suspicion_level": 0.5,
             }
-        # Always include raw response and prompt for logging
-        result.setdefault("_raw_response", raw_text)
-        result.setdefault("_prompt", prompt)
-        return result
+        parsed.setdefault("_raw_response", raw_text)
+        parsed.setdefault("_prompt", prompt)
+        return parsed

@@ -19,26 +19,23 @@ def analyze_statement_deception(state: GameState, speaker_name: str, statement: 
     """
     Analyze a statement for deception using self-analysis and peer analysis.
     """
-    # Initialize deception detector
     detector = DeceptionDetector(player_objects[speaker_name].llm)
 
     context = f"Round {state.round_num}, Phase: {state.phase}. Alive players: {', '.join(state.alive_players)}."
     if state.debate_log:
-        recent_dialogue = state.debate_log[-3:]  # Last 3 statements for context
+        recent_dialogue = state.debate_log[-3:]
         context += f" Recent dialogue: {'; '.join([f'{s}: {d}' for s, d in recent_dialogue])}"
 
-    # Ask  speaker to analyze their own statement
     self_analysis = detector.analyze_self_deception(speaker_name, statement, context)
 
-    # Ask all other alive players to analyze the statement
     other_players = [p for p in state.alive_players if p != speaker_name]
     other_analyses = {}
 
-    # Run analyses in parallel
+    # Every observer reads the statement at once — this is the expensive part of a
+    # turn, so it fans out across a thread pool.
     with ThreadPoolExecutor(max_workers=max(1, len(other_players))) as executor:
         futures = {}
         for observer in other_players:
-            # Get observer's history
             speaker_history = state.deception_history.get(speaker_name, [])
             futures[observer] = executor.submit(
                 detector.analyze_other_deception,
@@ -51,7 +48,8 @@ def analyze_statement_deception(state: GameState, speaker_name: str, statement: 
                 analysis["timestamp"] = datetime.utcnow().isoformat()
                 other_analyses[observer] = analysis
             except Exception as e:
-                # Fallback
+                # A failed read counts as "saw nothing suspicious" rather than
+                # dropping the observer, so downstream counts stay consistent.
                 other_analyses[observer] = {
                     "chain_of_thought": f"Analysis failed: {str(e)}",
                     "is_deceptive": 0,
@@ -62,10 +60,8 @@ def analyze_statement_deception(state: GameState, speaker_name: str, statement: 
                     "timestamp": datetime.utcnow().isoformat()
                 }
 
-    # Update rich history and scores
     state = update_deception_history(state, speaker_name, statement, self_analysis, other_analyses)
 
-    # Compute iteration-level summary metrics
     observer_count = len(other_analyses)
     observer_deceptive_count = sum(1 for a in other_analyses.values() if a.get("is_deceptive", 0) == 1)
     suspicion_levels = {name: a.get("suspicion_level", 0.5) for name, a in other_analyses.items()}
@@ -101,7 +97,6 @@ def analyze_statement_deception(state: GameState, speaker_name: str, statement: 
         "average_suspicion": avg_suspicion,
     })
 
-    # Print summary
     deception_count = sum(1 for analysis in other_analyses.values() if analysis.get("is_deceptive", 0) == 1)
     tqdm.tqdm.write(f"   Deception Analysis: {deception_count}/{len(other_analyses)} observers think it's deceptive")
 
@@ -119,7 +114,6 @@ def generate_deception_summary(state: GameState) -> Dict:
         "deception_patterns": {}
     }
 
-    # Analyze deception history
     for player, history in state.deception_history.items():
         player_summary = {
             "total_statements": len(history),
@@ -132,16 +126,13 @@ def generate_deception_summary(state: GameState) -> Dict:
         suspicion_count = 0
 
         for record in history:
-            # Count self-reported deceptions
             if record["self_analysis"].get("is_deceptive", 0) == 1:
                 player_summary["self_reported_deceptions"] += 1
 
-            # Count peer-detected deceptions
             for peer_analysis in record["other_analyses"].values():
                 if peer_analysis.get("is_deceptive", 0) == 1:
                     player_summary["peer_detected_deceptions"] += 1
 
-                # Track suspicion levels
                 suspicion = peer_analysis.get("suspicion_level", 0.5)
                 total_suspicion += suspicion
                 suspicion_count += 1

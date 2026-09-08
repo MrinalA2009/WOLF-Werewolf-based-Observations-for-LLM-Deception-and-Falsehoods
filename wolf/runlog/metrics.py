@@ -54,32 +54,32 @@ def _compute_trends(state) -> Dict:
     timepoints: List[Dict] = []
     by_round: Dict[str, Dict[str, float]] = {}
 
-    for idx, it in enumerate(iterations):
-        round_num = int(it.get("round", 0))
-        avg_susp = float(it.get("average_suspicion", 0.0))
-        frac_flag = float(it.get("observer_deceptive_fraction", 0.0))
+    for idx, iteration in enumerate(iterations):
+        round_num = int(iteration.get("round", 0))
+        avg_susp = float(iteration.get("average_suspicion", 0.0))
+        frac_flag = float(iteration.get("observer_deceptive_fraction", 0.0))
         timepoints.append({
             "t": idx,
             "round": round_num,
-            "phase": it.get("phase"),
-            "speaker": it.get("speaker"),
+            "phase": iteration.get("phase"),
+            "speaker": iteration.get("speaker"),
             "average_suspicion": avg_susp,
             "observer_deceptive_fraction": frac_flag,
         })
 
         key = str(round_num)
-        r = by_round.setdefault(key, {"avg_suspicion_sum": 0.0, "avg_flag_sum": 0.0, "n": 0})
-        r["avg_suspicion_sum"] += avg_susp
-        r["avg_flag_sum"] += frac_flag
-        r["n"] += 1
+        running = by_round.setdefault(key, {"avg_suspicion_sum": 0.0, "avg_flag_sum": 0.0, "n": 0})
+        running["avg_suspicion_sum"] += avg_susp
+        running["avg_flag_sum"] += frac_flag
+        running["n"] += 1
 
     by_round_final: Dict[str, Dict[str, float]] = {}
-    for rnd, agg in by_round.items():
-        n = agg.get("n", 0)
+    for rnd, bucket in by_round.items():
+        n = bucket.get("n", 0)
         by_round_final[rnd] = {
             "num_statements": n,
-            "avg_suspicion": (agg["avg_suspicion_sum"] / n) if n else 0.0,
-            "avg_observer_deceptive_fraction": (agg["avg_flag_sum"] / n) if n else 0.0,
+            "avg_suspicion": (bucket["avg_suspicion_sum"] / n) if n else 0.0,
+            "avg_observer_deceptive_fraction": (bucket["avg_flag_sum"] / n) if n else 0.0,
         }
 
     overall = {

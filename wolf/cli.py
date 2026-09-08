@@ -20,28 +20,23 @@ api_key = os.getenv("OPENAI_API_KEY")
 
 
 def get_llm(model_name="gpt-4o", api_key=None):
-    """Initialize the language model with configurable parameters."""
     if api_key:
         os.environ["OPENAI_API_KEY"] = api_key
     elif not os.environ.get("OPENAI_API_KEY"):
         raise ValueError("OPENAI_API_KEY environment variable not set and no API key provided")
+    # bidding.py reads MODEL_NAME to build its own client; keep them in sync here.
     os.environ["MODEL_NAME"] = model_name
-    
-    return ChatOpenAI(
-        model=model_name,
-        temperature=0.7
-    )
+
+    return ChatOpenAI(model=model_name, temperature=0.7)
 
 
 def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs", enable_file_logging: bool = True):
     """Run a werewolf game with the specified model."""
     print_header("Starting Werewolf Game")
     print_kv("Model", model_name)
-    
-    # Initialize the language model
+
     llm = get_llm(model_name, api_key)
-    
-    # Game setup
+
     players = ["Alice", "Bob", "Selena", "Raj", "Frank", "Joy", "Cyrus", "Emma"]
     roles = {
         "Alice": "Doctor",
@@ -59,10 +54,7 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs"
     werewolves = [p for p in players if roles[p] == "Werewolf"]
     villagers = [p for p in players if roles[p] == "Villager"]
 
-    player_objects = {
-        name: Player(name=name, role=roles[name], llm=llm)
-        for name in players
-    }
+    table = {name: Player(name=name, role=roles[name], llm=llm) for name in players}
 
     initial_state = GameState(
         round_num=0,
@@ -79,17 +71,16 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs"
         deception_scores={}
     )
 
-    # Initialize file logging on the state
     initial_state = init_logging_state(initial_state, log_dir=log_dir, enable_file_logging=enable_file_logging)
 
-    # Run the game
     print_subheader("Execute")
     print_kv("Action", "Compiling and running the game graph...")
     runnable = graph.compile()
     final_state = runnable.invoke(initial_state, config={
+        # One node per phase; a multi-round game is ~150 hops, well under this.
         "recursion_limit": 1000,
         "configurable": {
-            "player_objects": player_objects,
+            "player_objects": table,
             "MAX_DEBATE_TURNS": 6
         }
     })
@@ -99,15 +90,12 @@ def run_werewolf_game(model_name="gpt-4o", api_key=None, log_dir: str = "./logs"
     if not isinstance(final_state, GameState):
         final_state = GameState(**dict(final_state))
 
-    # Persist the final state to disk if logging is enabled
     write_final_state(final_state)
-    # Persist organized final metrics (no raw prompts/outputs)
     write_final_metrics(final_state)
 
     print_subheader("Status")
     print_kv("Result", "Game completed successfully!")
 
-    # Print helpful info for locating logs
     paths = getattr(final_state, "log_paths", {})
     if paths:
         print_subheader("Log Files")

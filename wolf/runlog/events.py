@@ -48,7 +48,6 @@ def init_logging_state(state, log_dir: Optional[str] = None, enable_file_logging
         "index": os.path.join(base_dir, "index.jsonl"),  # global index of runs
     }
 
-    # Write meta and append to index
     meta = {
         "run_id": run_id,
         "created_at_utc": datetime.utcnow().isoformat(),
@@ -62,7 +61,6 @@ def init_logging_state(state, log_dir: Optional[str] = None, enable_file_logging
     with _FILE_LOCK:
         with open(paths["meta"], "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)
-        # Append an index record for easy discovery
         try:
             with open(paths["index"], "a", encoding="utf-8") as fidx:
                 fidx.write(json.dumps({
@@ -73,7 +71,7 @@ def init_logging_state(state, log_dir: Optional[str] = None, enable_file_logging
                     "metrics_path": paths["metrics"],
                 }) + "\n")
         except FileNotFoundError:
-            # Ensure parent exists and retry
+            # index file lives one level up; make sure that dir exists
             _ensure_dirs(os.path.dirname(paths["index"]))
             with open(paths["index"], "a", encoding="utf-8") as fidx:
                 fidx.write(json.dumps({
@@ -127,7 +125,6 @@ def log_event(state, event_type: str, actor: Optional[str], content: Dict):
         "details": content,
     }
 
-    # Stream to NDJSON if configured
     paths = getattr(state, "log_paths", None)
     if paths and paths.get("events"):
         try:

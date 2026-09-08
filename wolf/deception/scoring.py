@@ -21,7 +21,6 @@ def update_deception_history(state, player_name: str, statement: str,
         Updated game state
     """
 
-    # Aggregate observer metrics
     observer_count = len(other_analyses)
     observer_deceptive_count = sum(1 for a in other_analyses.values() if a.get("is_deceptive", 0) == 1)
     observers_flagging = [name for name, a in other_analyses.items() if a.get("is_deceptive", 0) == 1]
@@ -78,10 +77,11 @@ def update_deception_history(state, player_name: str, statement: str,
         if observer not in new_scores:
             new_scores[observer] = {}
 
-        # Update score
         current_score = new_scores[observer].get(player_name, 0.5)
         new_assessment = analysis.get("suspicion_level", 0.5)
-        # Weighted average: 70% new assessment, 30% historical
+        # Recency-weighted (alpha = 0.7, the value used in the paper): a player's
+        # standing can move within a single game, but one loud accusation can't
+        # swing it on its own.
         new_scores[observer][player_name] = 0.7 * new_assessment + 0.3 * current_score
 
     return state.model_copy(update={

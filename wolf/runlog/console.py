@@ -28,12 +28,12 @@ def print_kv(label: str, value, indent: int = 0) -> None:
 
 def print_list(items, indent: int = 2) -> None:
     prefix = " " * indent
-    for item in items:
-        print(f"{prefix}- {item}")
+    for entry in items:
+        print(f"{prefix}- {entry}")
 
 
 def print_matrix(title: str, matrix: Dict[str, Dict[str, float]], indent: int = 2) -> None:
     print_subheader(title)
     for row_key, cols in matrix.items():
-        parts = [f"{col}={val:.2f}" for col, val in cols.items()]
-        print_kv(row_key, ", ".join(parts), indent)
+        cells = [f"{col}={val:.2f}" for col, val in cols.items()]
+        print_kv(row_key, ", ".join(cells), indent)
