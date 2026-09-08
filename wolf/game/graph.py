@@ -5,20 +5,21 @@
 # (Apache-2.0). WOLF swaps its own LangGraph state machine and deception
 # instrumentation in around that shape; see NOTICE and docs/methodology.md.
 
-from typing import Optional, Literal
-from langchain_core.runnables import RunnableConfig
 import random
-import tqdm
-from langgraph.graph import StateGraph, END
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+from typing import Literal, Optional
 
-from wolf.game.state import GameState
-from wolf.game.bidding import get_bid, choose_next_speaker
+import tqdm
+from langchain_core.runnables import RunnableConfig
+from langgraph.graph import END, StateGraph
+
 from wolf.deception.analysis import analyze_statement_deception, generate_deception_summary
 from wolf.deception.scoring import compute_observer_accuracy
+from wolf.game.bidding import choose_next_speaker, get_bid
+from wolf.game.state import GameState
+from wolf.runlog.console import print_header, print_kv, print_matrix, print_subheader
 from wolf.runlog.events import log_event
-from wolf.runlog.console import print_header, print_subheader, print_kv, print_matrix
 
 
 def _seated(config: RunnableConfig) -> dict:

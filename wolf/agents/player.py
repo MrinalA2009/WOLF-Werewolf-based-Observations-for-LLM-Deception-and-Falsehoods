@@ -3,10 +3,11 @@
 
 import json
 import re
+from typing import ClassVar, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Literal, ClassVar
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, Field
+
 
 class Player(BaseModel):
     name: str

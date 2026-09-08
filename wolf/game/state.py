@@ -2,8 +2,9 @@
 # Copyright 2025 Mrinal Agarwal, Saad Rana, and the WOLF authors
 # The game loop is derived from Google's Werewolf Arena (Apache-2.0); see NOTICE.
 
+from typing import Dict, List, Literal, Optional
+
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Literal
 
 
 class GameState(BaseModel):

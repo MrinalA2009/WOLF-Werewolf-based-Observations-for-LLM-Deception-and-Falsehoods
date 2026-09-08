@@ -1,18 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2025 Mrinal Agarwal, Saad Rana, and the WOLF authors
 
-import os
 import argparse
+import os
 
-from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 
+from wolf.agents.player import Player
 from wolf.game.graph import graph
 from wolf.game.state import GameState
-from wolf.agents.player import Player
+from wolf.runlog.console import print_header, print_kv, print_subheader
 from wolf.runlog.events import init_logging_state, write_final_state
 from wolf.runlog.metrics import write_final_metrics
-from wolf.runlog.console import print_header, print_subheader, print_kv
 
 load_dotenv()
 

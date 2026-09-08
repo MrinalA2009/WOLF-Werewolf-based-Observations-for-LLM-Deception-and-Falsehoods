@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wolf-benchmark"
+version = "0.1.0"
+description = "Werewolf-based Observations for LLM Deception and Falsehoods: a social-deduction benchmark that separates deception production from detection."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Mrinal Agarwal" },
+    { name = "Saad Rana" },
+]
+dependencies = [
+    "langchain>=0.3.7,<0.4.0",
+    "langchain-core>=0.3.8",
+    "langchain-openai>=0.2.7,<0.3.0",
+    "langgraph>=0.2.41,<0.7.0",
+    "python-dotenv>=1.0,<3.0",
+    "tqdm>=4.66,<5.0",
+    "pydantic>=2.5,<3.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+wolf = "wolf.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["wolf*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+# E501: long lines are almost all prompt text / data literals, not logic.
+ignore = ["E501"]
+# metrics.py keeps a pre-existing NameError bug on purpose; see KNOWN_ISSUES.md #1.
+per-file-ignores = { "wolf/runlog/metrics.py" = ["F821"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

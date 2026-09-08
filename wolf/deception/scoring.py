@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2025 Mrinal Agarwal, Saad Rana, and the WOLF authors
 
-from typing import Dict, List
 from datetime import datetime
+from typing import Dict
 
 
 def update_deception_history(state, player_name: str, statement: str,
@@ -100,7 +100,7 @@ def compute_observer_accuracy(state) -> Dict[str, Dict[str, float]]:
     """
     metrics: Dict[str, Dict[str, float]] = {}
 
-    for speaker, history in getattr(state, "deception_history", {}).items():
+    for history in getattr(state, "deception_history", {}).values():
         for record in history:
             true_label = 1 if record.get("self_analysis", {}).get("is_deceptive", 0) == 1 else 0
             for observer, analysis in record.get("other_analyses", {}).items():
@@ -116,8 +116,7 @@ def compute_observer_accuracy(state) -> Dict[str, Dict[str, float]]:
                     stat["fn"] += 1
                 stat["total"] += 1
 
-    # compute rates
-    for observer, stat in metrics.items():
+    for stat in metrics.values():
         total = stat.get("total", 0)
         tp = stat.get("tp", 0)
         tn = stat.get("tn", 0)

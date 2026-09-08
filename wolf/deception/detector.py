@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2025 Mrinal Agarwal, Saad Rana, and the WOLF authors
 
-from typing import Dict, List
-from langchain_openai import ChatOpenAI
 import json
+from typing import Dict, List
+
+from langchain_openai import ChatOpenAI
 
 
 class DeceptionDetector:

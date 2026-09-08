@@ -1,8 +1,8 @@
-"""Deterministic, network-free test doubles and a full-game runner.
+"""Deterministic, offline test doubles plus a full-game runner.
 
-Everything here exists so the suite can exercise the real graph without an API
-key. The runner mirrors run.py / wolf.cli step for step; if the two drift, the
-parity test is the thing that will scream.
+`play_game` mirrors `wolf.cli.run_werewolf_game` step for step but swaps in a
+scripted model, so the suite can drive the real graph with no API key. If the two
+drift apart, `test_refactor_parity` is what catches it.
 """
 
 from __future__ import annotations
@@ -11,21 +11,12 @@ import json
 import random
 import re
 
-# Import paths are tried package-first, then flat-layout, so the same file works
-# before and after the reorg.
-try:
-    from wolf.game.graph import graph
-    from wolf.game.state import GameState
-    from wolf.agents.player import Player
-    from wolf.game import bidding
-    from wolf.runlog.events import init_logging_state, write_final_state
-    from wolf.runlog.metrics import write_final_metrics
-except ModuleNotFoundError:  # flat pre-refactor layout
-    from game_graph import graph, GameState
-    from player import Player
-    import Bidding as bidding
-    from logs import init_logging_state, write_final_state, write_final_metrics
-
+from wolf.agents.player import Player
+from wolf.game import bidding
+from wolf.game.graph import graph
+from wolf.game.state import GameState
+from wolf.runlog.events import init_logging_state, write_final_state
+from wolf.runlog.metrics import write_final_metrics
 
 ROSTER = ["Alice", "Bob", "Selena", "Raj", "Frank", "Joy", "Cyrus", "Emma"]
 ROLES = {
@@ -50,8 +41,8 @@ class _Reply:
 
 
 class ScriptedLLM:
-    """Stands in for ChatOpenAI. Answers each prompt shape with fixed JSON so a
-    whole game plays out identically every run."""
+    """Stands in for ChatOpenAI. Every prompt shape gets one fixed JSON answer, so
+    a whole game plays out identically on every run."""
 
     def __init__(self, roster=ROSTER):
         self.roster = list(roster)
@@ -117,10 +108,9 @@ class ScriptedLLM:
 
 def play_game(*, seed: int = 0, log_dir: str | None = None,
               enable_file_logging: bool = False) -> GameState:
-    """Run one full game against ScriptedLLM. Mirrors run.run_werewolf_game."""
     random.seed(seed)
     llm = ScriptedLLM()
-    bidding._llm = llm  # short-circuit the module-global lazy init
+    bidding._llm = llm  # short-circuit the module-global lazy client
 
     seer = next((p for p in ROSTER if ROLES[p] == "Seer"), None)
     doctor = next((p for p in ROSTER if ROLES[p] == "Doctor"), None)
@@ -128,8 +118,8 @@ def play_game(*, seed: int = 0, log_dir: str | None = None,
     villagers = [p for p in ROSTER if ROLES[p] == "Villager"]
 
     # model_construct skips validation of the llm field so the double slots in.
-    agents = {name: Player.model_construct(name=name, role=ROLES[name], llm=llm)
-              for name in ROSTER}
+    table = {name: Player.model_construct(name=name, role=ROLES[name], llm=llm)
+             for name in ROSTER}
 
     state = GameState(
         round_num=0,
@@ -147,14 +137,10 @@ def play_game(*, seed: int = 0, log_dir: str | None = None,
     )
     state = init_logging_state(state, log_dir=log_dir, enable_file_logging=enable_file_logging)
 
-    runnable = graph.compile()
-    final_state = runnable.invoke(state, config={
+    final_state = graph.compile().invoke(state, config={
         "recursion_limit": 1000,
-        "configurable": {"player_objects": agents, "MAX_DEBATE_TURNS": 6},
+        "configurable": {"player_objects": table, "MAX_DEBATE_TURNS": 6},
     })
-    # Recent langgraph hands back the raw channel dict rather than the pydantic
-    # model; rebuild it so the rest of the pipeline has a GameState. (Same shim
-    # lives in wolf.cli — see KNOWN_ISSUES.md.)
     if not isinstance(final_state, GameState):
         final_state = GameState(**dict(final_state))
 
@@ -162,8 +148,7 @@ def play_game(*, seed: int = 0, log_dir: str | None = None,
     try:
         write_final_metrics(final_state)
     except Exception:
-        # Known issue: metrics path raises NameError today. See KNOWN_ISSUES.md.
-        pass
+        pass  # KNOWN_ISSUES.md #1 — metrics path raises NameError today
     return final_state
 
 
@@ -171,14 +156,16 @@ _ISO = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[+-]\d{2}:\d
 
 
 def normalize(blob):
-    """Recursively replace timestamps and run ids so two runs compare equal."""
+    """Blank out timestamps and run ids so two runs compare equal."""
     if isinstance(blob, dict):
         return {k: ("<ts>" if k in {"timestamp", "created_at_utc"} else normalize(v))
                 for k, v in blob.items()}
     if isinstance(blob, list):
         return [normalize(v) for v in blob]
     if isinstance(blob, str):
-        s = _ISO.sub("<ts>", blob)
-        s = re.sub(r"\d{8}-\d{6}-\d{6}", "<run>", s)
-        return s
+        return re.sub(r"\d{8}-\d{6}-\d{6}", "<run>", _ISO.sub("<ts>", blob))
     return blob
+
+
+def canonical(state: GameState) -> str:
+    return json.dumps(normalize(json.loads(state.model_dump_json())), indent=2, sort_keys=True)

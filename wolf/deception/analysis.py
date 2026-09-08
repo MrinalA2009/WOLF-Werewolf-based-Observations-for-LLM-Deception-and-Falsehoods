@@ -1,16 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2025 Mrinal Agarwal, Saad Rana, and the WOLF authors
 
-from typing import Dict
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from typing import Dict
 
 import tqdm
 from langchain_core.runnables import RunnableConfig
 
-from wolf.game.state import GameState
 from wolf.deception.detector import DeceptionDetector
 from wolf.deception.scoring import update_deception_history
+from wolf.game.state import GameState
 from wolf.runlog.events import log_event
 
 

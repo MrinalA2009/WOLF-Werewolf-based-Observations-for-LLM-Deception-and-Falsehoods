@@ -1,7 +1,10 @@
+# Runtime deps are declared in pyproject.toml; this file is kept for
+#   pip install -r requirements.txt
+# workflows. For development use `pip install -e ".[dev]"` instead.
 langchain>=0.3.7,<0.4.0
-langgraph>=0.2.41,<0.3.0
-langchain-core>=0.3.8,<0.4.0
+langchain-core>=0.3.8
 langchain-openai>=0.2.7,<0.3.0
-python-dotenv>=1.0,<2.0
+langgraph>=0.2.41,<0.7.0
+python-dotenv>=1.0,<3.0
 tqdm>=4.66,<5.0
 pydantic>=2.5,<3.0
